@@ -321,3 +321,16 @@ button, input, textarea, select { font: inherit; color: inherit; }
   .tpl-form { width: 100%; overflow: visible; border-right: 0; }
   .tpl-previews { overflow: visible; }
 }
+
+/* ---------- update ---------- */
+.update-bar {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 70;
+  display: flex; align-items: center; gap: 12px; background: #1B2A41; color: #fff;
+  padding: 10px 10px 10px 16px; border-radius: 12px; box-shadow: var(--shadow-lg); font-size: 14px;
+  max-width: calc(100% - 32px);
+}
+.update-btn {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 8px; padding: 7px 12px;
+  background: #fff; color: #1B2A41; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.link-btn { border: 0; background: transparent; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; }

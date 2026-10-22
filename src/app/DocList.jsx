@@ -6,6 +6,7 @@ import { defaultTemplate } from '../storage/templates';
 import { newSop, copySop } from '../model/defaults';
 import { fmtDate } from '../layout/engine';
 import { Toast } from '../editor/Toast';
+import { CHECK_EVENT } from './UpdateCheck';
 
 export function DocList() {
   const nav = useNavigate();
@@ -70,7 +71,10 @@ export function DocList() {
           </div>
         ))}
       </div>
-      <footer className="about muted small">v{__APP_VERSION__} · build {__BUILD_ID__}</footer>
+      <footer className="about muted small">
+        v{__APP_VERSION__} · build {__BUILD_ID__} ·{' '}
+        <button className="link-btn" onClick={() => window.dispatchEvent(new Event(CHECK_EVENT))}>Check for updates</button>
+      </footer>
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
