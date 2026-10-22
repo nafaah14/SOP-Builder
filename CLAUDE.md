@@ -3,7 +3,7 @@
 A standalone PWA for writing official-quality SOPs: steps, text, tables,
 annotated photos, laid out and paginated automatically, exported to PDF.
 Vite + React 19, local-first (IndexedDB), Google Drive sync (planned),
-deployed on Cloudflare Pages. Separate from Daybook (`nafaah14/Daynote`) — it
+deployed as a Cloudflare Workers static-assets project (`wrangler.jsonc`). Separate from Daybook (`nafaah14/Daynote`) — it
 copies some patterns from there but shares no code.
 
 ## Commands

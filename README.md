@@ -45,7 +45,10 @@ the next page when they don't fit.
    text labels, blur, crop/rotate; non-destructive.
 6. Google Drive sync, `.sop` backup files, PWA install, Cloudflare Pages.
 
-## Deploy (Cloudflare Pages)
+## Deploy (Cloudflare Workers)
 
-Build command `npm run build`, output directory `dist`. `public/_redirects`
-sends every path to `index.html` for client-side routing.
+Connected to Git in the Cloudflare dashboard; every push to `main` deploys.
+Build command `npm run build`, deploy command `npx wrangler deploy`.
+`wrangler.jsonc` serves `dist/` as static assets with single-page-app
+fallback, so `/doc/<id>` survives a reload. Without that file wrangler tries
+to auto-detect the project from `vite.config.js` and fails.
