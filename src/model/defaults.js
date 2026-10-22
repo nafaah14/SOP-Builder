@@ -1,6 +1,6 @@
 import { ulid } from 'ulid';
 
-export const SCHEMA_VERSION = 1;
+export const SCHEMA_VERSION = 2;
 
 export const PAGE_SIZES = {
   A4: { w: 210, h: 297, label: 'A4' },
@@ -14,7 +14,7 @@ export const BLOCK_KINDS = {
   pageBreak: 'Page break',
 };
 
-export const HEADER_FOOTER_TOKENS = ['{title}', '{docNo}', '{rev}', '{page}', '{pages}', '{date}', '{department}'];
+export const HEADER_FOOTER_TOKENS = ['{title}', '{docNo}', '{rev}', '{page}', '{pages}', '{date}', '{department}', '{company}'];
 
 export const newId = () => ulid();
 
@@ -29,9 +29,21 @@ export function newBlock(kind) {
   }
 }
 
-export function newSop(title = 'Untitled SOP') {
+export const DEFAULT_FRONT = { cover: true, revisionHistory: true, toc: true, tocDepth: 2 };
+export const DEFAULT_BRAND = {
+  company: '',
+  logo: null,
+  coverStyle: 'classic',
+  footerNote: 'Uncontrolled when printed',
+  headerLogo: false,
+  docType: 'Standard Operating Procedure',
+};
+const person = () => ({ name: '', position: '', date: '' });
+export const emptyControl = () => ({ prepared: person(), reviewed: person(), approved: person() });
+
+export function newSop(title = 'Untitled SOP', template = null) {
   const now = new Date().toISOString();
-  return {
+  const doc = {
     id: newId(),
     schemaVersion: SCHEMA_VERSION,
     title,
@@ -39,6 +51,12 @@ export function newSop(title = 'Untitled SOP') {
     revision: '0',
     effectiveDate: now.slice(0, 10),
     department: '',
+    reviewDate: '',
+    templateId: null,
+    front: { ...DEFAULT_FRONT },
+    control: emptyControl(),
+    revisions: [],
+    brand: { ...DEFAULT_BRAND },
     createdAt: now,
     updatedAt: now,
     deletedAt: null,
@@ -60,6 +78,7 @@ export function newSop(title = 'Untitled SOP') {
       { ...newBlock('step'), title: 'First step', body: 'What to do, in plain words.' },
     ],
   };
+  return template ? applyTemplate(doc, template) : doc;
 }
 
 export function pageDims(page) {
@@ -80,5 +99,29 @@ export function copySop(doc) {
     title: `${doc.title} (copy)`,
     createdAt: new Date().toISOString(),
     blocks: doc.blocks.map(cloneBlock),
+  };
+}
+
+/**
+ * A template is copied into the SOP, not linked: an issued controlled
+ * document must not change because someone edited the template later.
+ * "Re-apply template" calls this again on purpose.
+ */
+export function applyTemplate(doc, t) {
+  return {
+    ...doc,
+    templateId: t.id,
+    style: { ...doc.style, accent: t.accent || doc.style.accent },
+    header: { ...t.header },
+    footer: { ...t.footer },
+    brand: {
+      ...doc.brand,
+      company: t.company || '',
+      logo: t.logo || null,
+      coverStyle: t.coverStyle || 'classic',
+      footerNote: t.footerNote ?? '',
+      headerLogo: !!t.headerLogo,
+      docType: t.docType || DEFAULT_BRAND.docType,
+    },
   };
 }

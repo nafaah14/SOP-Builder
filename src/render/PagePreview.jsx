@@ -25,6 +25,12 @@ function Box({ b }) {
   if (b.t === 'line') {
     return <line x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke={b.color} strokeWidth={b.lw} />;
   }
+  if (b.t === 'image') {
+    return <image href={b.src} x={b.x} y={b.y} width={b.w} height={b.h} preserveAspectRatio="none" />;
+  }
+  if (b.t === 'link') {
+    return <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="transparent" data-page={b.page} className="page-link" />;
+  }
   if (b.t === 'rect') {
     return <rect x={b.x} y={b.y} width={b.w} height={b.h} fill={b.fill || 'none'} stroke={b.stroke || 'none'} strokeWidth={b.lw || 0.3} />;
   }

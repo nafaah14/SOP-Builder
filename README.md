@@ -26,6 +26,17 @@ Document JSON ──► layout(doc, measure) ──► pages[{ boxes }]
                                              └─► pdfWriter (jsPDF)
 ```
 
+A document is up to four parts, each starting on a new page: cover,
+revision history, contents, body. The cover is a fixed composition
+(`layout/cover.js`); the others flow through `layout/paginate.js`. Contents
+is laid out twice — once to learn its length, then with real page numbers.
+Tables (`layout/table.js`) never split a row and repeat their header row on
+each page.
+
+Templates are copied into an SOP when applied, not linked, so editing a
+template never changes an already-issued document. "Re-apply" pulls changes
+in on purpose.
+
 Each block becomes rows (a line of text, a heading line, a rule). Rows carry a
 `gap` (dropped at the top of a page) and `glue` (never break after this row).
 Headings glue to the following lines; a paragraph's first two and last two
@@ -36,8 +47,9 @@ the next page when they don't fit.
 
 1. ✅ Model, layout engine, canvas, reorder/delete/undo, page-break markers,
    preview, PDF with header/footer/page numbers.
-2. Cover page, document control block (prepared/reviewed/approved), revision
-   history, auto table of contents, reusable templates/branding.
+2. ✅ Cover page (Classic, Corporate band, Minimal), document approval table,
+   revision history, auto contents with page numbers and PDF links,
+   reusable templates/branding (logo, company, colours, header/footer).
 3. Tables (repeat header row across pages) and callouts (warning, caution,
    note, tip).
 4. Images — camera, upload, paste; placement rules.

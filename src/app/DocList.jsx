@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, FileText, Copy, Trash2 } from 'lucide-react';
+import { Plus, FileText, Copy, Trash2, Palette } from 'lucide-react';
 import { listDocs, saveDoc, softDeleteDoc, restoreDoc } from '../storage/local';
+import { defaultTemplate } from '../storage/templates';
 import { newSop, copySop } from '../model/defaults';
 import { fmtDate } from '../layout/engine';
 import { Toast } from '../editor/Toast';
@@ -15,7 +16,7 @@ export function DocList() {
   useEffect(() => { refresh(); }, []);
 
   const create = async () => {
-    const doc = await saveDoc(newSop());
+    const doc = await saveDoc(newSop('Untitled SOP', await defaultTemplate()));
     nav(`/doc/${doc.id}`);
   };
 
@@ -37,7 +38,10 @@ export function DocList() {
           <h1>SOP Builder</h1>
           <p className="muted">Standard operating procedures, laid out for you.</p>
         </div>
-        <button className="btn primary" onClick={create}><Plus size={16} /> New SOP</button>
+        <div className="row-gap">
+          <button className="btn" onClick={() => nav('/templates')}><Palette size={16} /> Templates</button>
+          <button className="btn primary" onClick={create}><Plus size={16} /> New SOP</button>
+        </div>
       </header>
 
       {docs && !docs.length && (

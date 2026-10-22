@@ -1,23 +1,18 @@
-import { openDB } from 'idb';
+import { dbp } from './db';
+import { migrate } from '../model/migrate';
 
 /**
  * Local-first: every SOP lives in IndexedDB on this device, so the editor is
  * instant and works offline. Drive sync (a later phase) layers on top of this
  * rather than replacing it.
  */
-const dbp = openDB('sop-builder', 1, {
-  upgrade(db) {
-    db.createObjectStore('docs', { keyPath: 'id' });
-  },
-});
-
 export async function listDocs() {
   const all = await (await dbp).getAll('docs');
-  return all.filter((d) => !d.deletedAt).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  return all.map(migrate).filter((d) => !d.deletedAt).sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function getDoc(id) {
-  return (await dbp).get('docs', id);
+  return migrate(await (await dbp).get('docs', id));
 }
 
 export async function saveDoc(doc) {

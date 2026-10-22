@@ -11,6 +11,11 @@ export function PreviewPane({ result, onClose, onExport, onJump, overlay }) {
   if (!result) return null;
 
   const onClick = (e) => {
+    const link = e.target.closest('[data-page]');
+    if (link) {
+      document.getElementById(`preview-page-${link.getAttribute('data-page')}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     const t = e.target.closest('[data-bid]');
     if (t && onJump) onJump(t.getAttribute('data-bid'));
   };
@@ -28,7 +33,7 @@ export function PreviewPane({ result, onClose, onExport, onJump, overlay }) {
       </div>
       <div className="preview-pages" onClick={onClick}>
         {result.pages.map((p, i) => (
-          <div key={i} className="preview-page" style={{ width: `${zoom * 100}%` }}>
+          <div key={i} id={`preview-page-${i + 1}`} className="preview-page" style={{ width: `${zoom * 100}%` }}>
             <PagePreview page={p} w={result.w} h={result.h} number={i + 1} />
             <div className="preview-page-no muted small">{i + 1}</div>
           </div>

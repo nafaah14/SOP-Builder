@@ -1,7 +1,12 @@
 import { pageDims } from '../model/defaults';
 import { computeNumbers } from '../model/numbering';
-import { PT } from './measure';
-import { parseBody, wrapRuns } from './rich';
+import { paginate } from './paginate';
+import { STYLE, fmtDate, lineH, baseline, textRows, bodyRows, headingRows, plainLines, textBox } from './text';
+import { tableRows } from './table';
+import { coverBoxes, controlCells, CONTROL_COLUMNS } from './cover';
+import { tocEntries, tocRows } from './toc';
+
+export { STYLE, fmtDate };
 
 /**
  * The layout engine: document JSON in, positioned page boxes out. Both the
@@ -13,82 +18,17 @@ import { parseBody, wrapRuns } from './rich';
  *   { t:'text', x, y (baseline), text, size (pt), bold, italic, color }
  *   { t:'rect', x, y, w, h, fill?, stroke?, lw? }
  *   { t:'line', x1, y1, x2, y2, color, lw }
+ *   { t:'image', x, y, w, h, src }
+ *   { t:'link', x, y, w, h, page }
  *
- * Pagination works on rows. A row is one unbreakable strip (a line of text, a
- * heading line, later an image or a table row) with a `gap` above it that is
- * dropped at the top of a page, and `glue` meaning "never break between me
- * and the next row". Keep-with-next and widow/orphan control are all just
- * glue, so the paginator itself stays a few lines long.
+ * A document is up to four parts, each starting on a new page: cover,
+ * revision history, contents, body. Each flowing part goes through the same
+ * paginator (paginate.js); the cover is a fixed composition (cover.js).
  */
 
-export const STYLE = {
-  body: 10,
-  lineHeight: 1.42,
-  muted: '#5B6573',
-  ink: '#1A1F29',
-  rule: '#C9CED6',
-  indent: 12,
-  bulletIndent: 5,
-  titleSize: 18,
-  sectionSize: 13,
-  stepTitleSize: 10.5,
-  headerSize: 8,
-  gap: { section: 8, step: 5, text: 3, para: 1.6, list: 0.6, blank: 3 },
-};
-
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export function fmtDate(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
-  if (!y || !m || !d) return iso;
-  return `${d} ${MONTHS[m - 1]} ${y}`;
-}
-
-const lineH = (size) => size * PT * STYLE.lineHeight;
-const baseline = (size) => {
-  const s = size * PT;
-  return (lineH(size) - s) / 2 + s * 0.78;
-};
-
-function textRows(lines, { size, x0, color, blockId, gapFirst, glueAll = false }) {
-  const h = lineH(size);
-  const n = lines.length;
-  return lines.map((ln, i) => ({
-    blockId,
-    h,
-    gap: i === 0 ? gapFirst : 0,
-    // widow/orphan: the first two and last two lines of a paragraph stay together
-    glue: glueAll || n <= 3 || i === 0 || i >= n - 2,
-    boxes: ln.runs.map((r) => ({
-      t: 'text', x: x0 + r.x, y: baseline(size), text: r.text, size, bold: r.bold, italic: r.italic, color,
-    })),
-  })).map((row, i, arr) => (i === arr.length - 1 ? { ...row, glue: glueAll } : row));
-}
-
-function bodyRows(body, { width, x0, measure, blockId, gapFirst }) {
-  const size = STYLE.body;
+function titleBlockRows(doc, { width, measure }) {
   const rows = [];
-  const paras = parseBody(body);
-  paras.forEach((p, pi) => {
-    const listIndent = p.kind === 'p' ? 0 : STYLE.bulletIndent;
-    const lines = wrapRuns(p.runs, width - listIndent, measure, size);
-    const inList = p.kind !== 'p' && paras[pi - 1]?.kind !== 'p';
-    const gap = pi === 0 ? gapFirst : p.blank ? STYLE.gap.blank : inList ? STYLE.gap.list : STYLE.gap.para;
-    const pr = textRows(lines, { size, x0: x0 + listIndent, color: STYLE.ink, blockId, gapFirst: gap });
-    if (p.kind !== 'p' && pr.length) {
-      const marker = p.kind === 'bullet' ? '•' : `${p.n}.`;
-      pr[0].boxes.unshift({ t: 'text', x: x0, y: baseline(size), text: marker, size, bold: false, italic: false, color: STYLE.ink });
-    }
-    rows.push(...pr);
-  });
-  return rows;
-}
-
-function titleBlockRows(doc, ctx) {
-  const { width, measure } = ctx;
-  const rows = [];
-  const title = doc.title || 'Untitled SOP';
-  const lines = wrapRuns([{ text: title, bold: true, italic: false }], width, measure, STYLE.titleSize);
+  const lines = plainLines(doc.title || 'Untitled SOP', width, measure, STYLE.titleSize, { bold: true });
   rows.push(...textRows(lines, { size: STYLE.titleSize, x0: 0, color: doc.style.accent, blockId: '__title', gapFirst: 0, glueAll: true }));
   const meta = [
     doc.docNo && `Doc No. ${doc.docNo}`,
@@ -99,7 +39,7 @@ function titleBlockRows(doc, ctx) {
   if (meta) {
     rows.push({
       blockId: '__title', h: lineH(9), gap: 1, glue: true,
-      boxes: [{ t: 'text', x: 0, y: baseline(9), text: meta, size: 9, bold: false, italic: false, color: STYLE.muted }],
+      boxes: [textBox(0, baseline(9), meta, 9, STYLE.muted)],
     });
   }
   rows.push({
@@ -118,10 +58,9 @@ function blockRows(block, ctx, isFirstSection) {
   switch (block.kind) {
     case 'section': {
       const size = STYLE.sectionSize;
-      const title = (block.title || 'Untitled section').toUpperCase();
-      const lines = wrapRuns([{ text: title, bold: true, italic: false }], width - indent, measure, size);
+      const lines = plainLines((block.title || 'Untitled section').toUpperCase(), width - indent, measure, size, { bold: true });
       const rows = textRows(lines, { size, x0: indent, color: accent, blockId: id, gapFirst: STYLE.gap.section, glueAll: true });
-      rows[0].boxes.unshift({ t: 'text', x: 0, y: baseline(size), text: numbers[id], size, bold: true, italic: false, color: accent });
+      rows[0].boxes.unshift(textBox(0, baseline(size), numbers[id], size, accent, { bold: true }));
       rows.push({
         blockId: id, h: 2.5, gap: 0.5, glue: true,
         boxes: [{ t: 'line', x1: 0, y1: 0.4, x2: width, y2: 0.4, color: STYLE.rule, lw: 0.3 }],
@@ -131,11 +70,11 @@ function blockRows(block, ctx, isFirstSection) {
     }
     case 'step': {
       const gapFirst = STYLE.gap.step;
-      const numBox = (size) => ({ t: 'text', x: 0, y: baseline(size), text: numbers[id], size, bold: true, italic: false, color: accent });
+      const numBox = (size) => textBox(0, baseline(size), numbers[id], size, accent, { bold: true });
       const rows = [];
       if (block.title?.trim()) {
         const size = STYLE.stepTitleSize;
-        const lines = wrapRuns([{ text: block.title.trim(), bold: true, italic: false }], width - indent, measure, size);
+        const lines = plainLines(block.title.trim(), width - indent, measure, size, { bold: true });
         const tr = textRows(lines, { size, x0: indent, color: STYLE.ink, blockId: id, gapFirst, glueAll: true });
         tr[0].boxes.unshift(numBox(size));
         rows.push(...tr);
@@ -149,10 +88,9 @@ function blockRows(block, ctx, isFirstSection) {
       rows.push(...br);
       return rows;
     }
-    case 'text': {
+    case 'text':
       return bodyRows(block.body || '', { width, x0: 0, measure, blockId: id, gapFirst: STYLE.gap.text })
         .filter((r) => r.boxes.length);
-    }
     case 'pageBreak':
       return [{ blockId: id, h: 0, gap: 0, glue: false, forceBreak: true, boxes: [] }];
     default:
@@ -160,7 +98,45 @@ function blockRows(block, ctx, isFirstSection) {
   }
 }
 
-/** Fill {title} {docNo} {rev} {page} {pages} {date} {department}. */
+export const REVISION_COLUMNS = [
+  { label: 'Rev', w: 0.1, align: 'center' },
+  { label: 'Date', w: 0.17 },
+  { label: 'Description of change', w: 0.51 },
+  { label: 'Author', w: 0.22 },
+];
+
+export function revisionCells(doc) {
+  if (doc.revisions?.length) {
+    return doc.revisions.map((r) => [r.rev, fmtDate(r.date), r.description, r.author]);
+  }
+  return [[doc.revision ?? '0', fmtDate(doc.effectiveDate), 'Initial issue', doc.control?.prepared?.name || '']];
+}
+
+const tableStyleOf = (doc) => (doc.brand?.coverStyle === 'minimal' ? 'lines' : 'grid');
+
+function revisionRows(doc, ctx) {
+  return [
+    ...headingRows('Revision history', { ...ctx, accent: doc.style.accent, blockId: '__rev' }),
+    ...tableRows({
+      columns: REVISION_COLUMNS, cells: revisionCells(doc), width: ctx.width, measure: ctx.measure,
+      accent: doc.style.accent, style: tableStyleOf(doc), blockId: '__rev', gapFirst: 2,
+    }),
+  ];
+}
+
+/** Without a cover, the approval table follows the title block — if anyone is named in it. */
+function bodyControlRows(doc, ctx) {
+  const c = doc.control || {};
+  if (![c.prepared, c.reviewed, c.approved].some((p) => p?.name)) return [];
+  const rows = tableRows({
+    columns: CONTROL_COLUMNS, cells: controlCells(doc), width: ctx.width, measure: ctx.measure,
+    accent: doc.style.accent, style: tableStyleOf(doc), minRowH: 10, blockId: '__title', gapFirst: 3,
+  });
+  rows[rows.length - 1].glue = false;
+  return rows;
+}
+
+/** Fill {title} {docNo} {rev} {page} {pages} {date} {department} {company}. */
 export function fillTokens(tpl, doc, page, pages) {
   if (!tpl) return '';
   return tpl
@@ -171,6 +147,7 @@ export function fillTokens(tpl, doc, page, pages) {
     .replaceAll('{pages}', String(pages))
     .replaceAll('{date}', fmtDate(doc.effectiveDate))
     .replaceAll('{department}', doc.department || '')
+    .replaceAll('{company}', doc.brand?.company || '')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }
@@ -178,115 +155,90 @@ export function fillTokens(tpl, doc, page, pages) {
 function headerFooterBoxes(doc, dims, page, pages, measure) {
   const { margins } = doc.page;
   const size = STYLE.headerSize;
-  const left = margins.left;
+  let left = margins.left;
   const right = dims.w - margins.right;
   const out = [];
-  const slots = (cfg, y) => {
+  const slots = (cfg, y, x0) => {
     for (const pos of ['left', 'center', 'right']) {
       const text = fillTokens(cfg?.[pos], doc, page, pages);
       if (!text) continue;
       const w = measure.width(text, { size });
-      const x = pos === 'left' ? left : pos === 'right' ? right - w : (left + right) / 2 - w / 2;
-      out.push({ t: 'text', x, y, text, size, bold: false, italic: false, color: STYLE.muted });
+      const x = pos === 'left' ? x0 : pos === 'right' ? right - w : (margins.left + right) / 2 - w / 2;
+      out.push(textBox(x, y, text, size, STYLE.muted));
     }
   };
   const hasAny = (cfg) => cfg && (cfg.left || cfg.center || cfg.right);
-  if (hasAny(doc.header)) {
+  const logo = doc.brand?.headerLogo && doc.brand?.logo?.dataUrl ? doc.brand.logo : null;
+  if (hasAny(doc.header) || logo) {
     const ruleY = margins.top - 6;
-    slots(doc.header, ruleY - 1.8);
-    out.push({ t: 'line', x1: left, y1: ruleY, x2: right, y2: ruleY, color: STYLE.rule, lw: 0.25 });
+    if (logo) {
+      const h = Math.min(7, margins.top - 9);
+      const w = Math.min((logo.w / logo.h) * h, 40);
+      const hh = (w / logo.w) * logo.h;
+      out.push({ t: 'image', x: left, y: ruleY - 1.5 - hh, w, h: hh, src: logo.dataUrl });
+      left += w + 3;
+    }
+    slots(doc.header, ruleY - 1.8, left);
+    out.push({ t: 'line', x1: margins.left, y1: ruleY, x2: right, y2: ruleY, color: STYLE.rule, lw: 0.25 });
   }
   if (hasAny(doc.footer)) {
     const ruleY = dims.h - margins.bottom + 6;
-    out.push({ t: 'line', x1: left, y1: ruleY, x2: right, y2: ruleY, color: STYLE.rule, lw: 0.25 });
-    slots(doc.footer, ruleY + 4.2);
+    out.push({ t: 'line', x1: margins.left, y1: ruleY, x2: right, y2: ruleY, color: STYLE.rule, lw: 0.25 });
+    slots(doc.footer, ruleY + 4.2, margins.left);
   }
   return out;
 }
-
-/** Group rows into unbreakable chunks along their glue. */
-function chunkRows(rows) {
-  const chunks = [];
-  let cur = [];
-  for (const r of rows) {
-    if (r.forceBreak && cur.length) {
-      chunks.push(cur);
-      cur = [];
-    }
-    cur.push(r);
-    if (!r.glue) {
-      chunks.push(cur);
-      cur = [];
-    }
-  }
-  if (cur.length) chunks.push(cur);
-  return chunks;
-}
-
-const chunkHeight = (chunk, atTop) =>
-  chunk.reduce((s, r, i) => s + r.h + (i === 0 && atTop ? 0 : r.gap), 0);
 
 export function layout(doc, measure) {
   const dims = pageDims(doc.page);
   const { margins } = doc.page;
   const width = dims.w - margins.left - margins.right;
-  const contentH = dims.h - margins.top - margins.bottom;
+  const frame = { left: margins.left, top: margins.top, height: dims.h - margins.top - margins.bottom };
   const numbers = computeNumbers(doc.blocks);
   const ctx = { width, measure, numbers, doc };
+  const front = doc.front || {};
 
-  const rows = [...titleBlockRows(doc, ctx)];
+  // ---- body
+  const bodyRowsAll = [];
+  if (!front.cover) bodyRowsAll.push(...titleBlockRows(doc, ctx), ...bodyControlRows(doc, ctx));
   // the first section follows the title on page 1 even with "sections start a new page"
   const firstSection = doc.blocks.find((b) => b.kind === 'section');
-  for (const b of doc.blocks) rows.push(...blockRows(b, ctx, b === firstSection));
+  for (const b of doc.blocks) bodyRowsAll.push(...blockRows(b, ctx, b === firstSection));
+  if (!bodyRowsAll.length) bodyRowsAll.push({ h: 0, gap: 0, glue: false, boxes: [] });
+  const body = paginate(bodyRowsAll, frame);
 
-  const pages = [{ boxes: [] }];
-  const blocks = {};
-  let y = 0;
-  const newPage = () => {
-    pages.push({ boxes: [] });
-    y = 0;
-  };
-  const place = (row) => {
-    if (y > 0) y += row.gap;
-    const ox = margins.left;
-    const oy = margins.top + y;
-    const page = pages[pages.length - 1];
-    for (const b of row.boxes) {
-      const bid = row.blockId;
-      if (b.t === 'line') page.boxes.push({ ...b, bid, x1: b.x1 + ox, x2: b.x2 + ox, y1: b.y1 + oy, y2: b.y2 + oy });
-      else page.boxes.push({ ...b, bid, x: b.x + ox, y: b.y + oy });
-    }
-    const p = pages.length;
-    const meta = blocks[row.blockId] || (blocks[row.blockId] = { startPage: p, endPage: p });
-    meta.endPage = p;
-    y += row.h;
-  };
+  // ---- front matter
+  const cover = front.cover ? [{ boxes: coverBoxes(doc, { dims, measure }), kind: 'cover' }] : [];
+  const rev = front.revisionHistory ? paginate(revisionRows(doc, ctx), frame).pages : [];
 
-  for (const chunk of chunkRows(rows)) {
-    if (chunk[0].forceBreak && y > 0) newPage();
-    if (y > 0 && y + chunkHeight(chunk, false) > contentH) newPage();
-    if (chunkHeight(chunk, y === 0) <= contentH - y) {
-      chunk.forEach(place);
-    } else {
-      // taller than a whole page: glue has to give somewhere
-      for (const row of chunk) {
-        if (y > 0 && y + row.gap + row.h > contentH) newPage();
-        place(row);
-      }
-    }
+  // Contents is laid out twice: once to learn how many pages it takes, then
+  // with real page numbers (which can't change its length — titles wrap
+  // against a fixed page-number column).
+  let toc = [];
+  const tocCtx = { width, measure, accent: doc.style.accent };
+  if (front.toc) {
+    const depth = front.tocDepth || 2;
+    const guess = paginate(tocRows(tocEntries(doc, numbers, body.blocks, depth, 0), tocCtx), frame).pages.length;
+    const offset = cover.length + rev.length + guess;
+    toc = paginate(tocRows(tocEntries(doc, numbers, body.blocks, depth, offset), tocCtx), frame).pages;
   }
-  // a page break with nothing after it shouldn't leave a blank last page
-  if (pages.length > 1 && !pages[pages.length - 1].boxes.length) pages.pop();
 
+  const offset = cover.length + rev.length + toc.length;
+  const pages = [
+    ...cover,
+    ...rev.map((p) => ({ ...p, kind: 'front' })),
+    ...toc.map((p) => ({ ...p, kind: 'front' })),
+    ...body.pages.map((p) => ({ ...p, kind: 'body' })),
+  ];
   const total = pages.length;
-  pages.forEach((pg, i) => pg.boxes.push(...headerFooterBoxes(doc, dims, i + 1, total, measure)));
+  pages.forEach((pg, i) => {
+    if (pg.kind !== 'cover') pg.boxes.push(...headerFooterBoxes(doc, dims, i + 1, total, measure));
+  });
 
-  for (const b of doc.blocks) {
-    if (blocks[b.id]) {
-      blocks[b.id].startPage = Math.min(blocks[b.id].startPage, total);
-      blocks[b.id].endPage = Math.min(blocks[b.id].endPage, total);
-    }
+  const blocks = {};
+  for (const [id, m] of Object.entries(body.blocks)) {
+    blocks[id] = { startPage: m.startPage + offset, endPage: m.endPage + offset };
   }
 
-  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total };
+  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total, bodyStartPage: offset + 1 };
 }

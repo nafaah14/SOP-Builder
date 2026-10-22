@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from './dndModifiers';
-import { Plus, Heading, ListOrdered, AlignLeft, Scissors } from 'lucide-react';
+import { Plus, Heading, ListOrdered, AlignLeft, Scissors, Check, Minus, Palette } from 'lucide-react';
 import { BlockCard } from './BlockCard';
 import { fmtDate } from '../layout/engine';
 
@@ -44,9 +44,9 @@ const PageMarker = ({ page }) => (
  * heights: a block that starts on a later page than the previous block ended
  * gets a marker above it.
  */
-function markersFor(blocks, layoutBlocks) {
+function markersFor(blocks, layoutBlocks, firstPage) {
   const out = {};
-  let lastEnd = 1;
+  let lastEnd = firstPage;
   for (const b of blocks) {
     const m = layoutBlocks[b.id];
     if (!m || b.kind === 'pageBreak') continue;
@@ -61,7 +61,7 @@ export function Canvas({ doc, result, act, onOpenSettings }) {
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
-  const markers = result ? markersFor(doc.blocks, result.blocks) : {};
+  const markers = result ? markersFor(doc.blocks, result.blocks, result.bodyStartPage) : {};
 
   const onDragEnd = ({ active, over }) => {
     if (!over || active.id === over.id) return;
@@ -75,9 +75,30 @@ export function Canvas({ doc, result, act, onOpenSettings }) {
 
   return (
     <div className="canvas" style={{ '--accent': doc.style.accent }}>
-      <div className="title-card" onClick={onOpenSettings} role="button" tabIndex={0}>
-        <div className="title-card-title">{doc.title || 'Untitled SOP'}</div>
-        <div className="muted small">{meta || 'Tap to set document number, revision and dates'}</div>
+      <div className="title-card">
+        <button className="title-card-main" onClick={() => onOpenSettings('details')}>
+          <div className="title-card-title">{doc.title || 'Untitled SOP'}</div>
+          <div className="muted small">{meta || 'Tap to set document number, revision and dates'}</div>
+        </button>
+        <div className="front-chips">
+          {[
+            ['cover', 'Cover', 'approvals'],
+            ['revisionHistory', 'Revision history', 'revisions'],
+            ['toc', 'Contents', 'layout'],
+          ].map(([k, label, tab]) => (
+            <button key={k} className={`front-chip${doc.front?.[k] ? ' on' : ''}`} onClick={() => onOpenSettings(tab)}>
+              {doc.front?.[k] ? <Check size={13} /> : <Minus size={13} />} {label}
+            </button>
+          ))}
+          <button className="front-chip" onClick={() => onOpenSettings('branding')}>
+            <Palette size={13} /> {doc.brand?.company || 'Branding'}
+          </button>
+        </div>
+        {result && result.bodyStartPage > 1 && (
+          <div className="front-note muted small">
+            Front matter on page{result.bodyStartPage > 2 ? `s 1–${result.bodyStartPage - 1}` : ' 1'} · procedure starts on page {result.bodyStartPage}
+          </div>
+        )}
       </div>
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd} modifiers={[restrictToVerticalAxis]}>

@@ -9,12 +9,12 @@ import { PreviewPane } from './PreviewPane';
 import { SettingsSheet } from './SettingsSheet';
 import { Toast } from './Toast';
 import { layout } from '../layout/engine';
-import { createMeasurer } from '../layout/measure';
+import { sharedMeasurer } from '../layout/measure';
 import { writePdf, pdfFileName } from '../render/pdfWriter';
 import * as ops from '../model/ops';
 import { BLOCK_KINDS, newBlock } from '../model/defaults';
 
-const measure = createMeasurer();
+const measure = sharedMeasurer();
 const WIDE = '(min-width: 1100px)';
 
 function useMedia(q) {
@@ -145,7 +145,7 @@ function EditorInner({ initial }) {
         <span className={`save-state small${saved ? '' : ' pending'}`}>{saved ? 'Saved' : 'Saving…'}</span>
         <button className="icon-btn" title="Undo (Ctrl+Z)" disabled={!canUndo} onClick={undo}><Undo2 size={18} /></button>
         <button className="icon-btn" title="Redo (Ctrl+Shift+Z)" disabled={!canRedo} onClick={redo}><Redo2 size={18} /></button>
-        <button className="icon-btn" title="Document settings" onClick={() => setShowSettings(true)}><Settings2 size={18} /></button>
+        <button className="icon-btn" title="Document settings" onClick={() => setShowSettings('details')}><Settings2 size={18} /></button>
         <button className={`btn sm${showPreview ? ' on' : ''}`} title="Preview (Ctrl+P)" onClick={() => setShowPreview((v) => !v)}>
           <Eye size={15} /> <span className="hide-sm">Preview</span>
         </button>
@@ -155,7 +155,7 @@ function EditorInner({ initial }) {
       <div className="workspace">
         {wide && <Outline doc={doc} result={result} act={act} onJump={jump} />}
         <main className="canvas-scroll">
-          <Canvas doc={doc} result={result} act={act} onOpenSettings={() => setShowSettings(true)} />
+          <Canvas doc={doc} result={result} act={act} onOpenSettings={(tab) => setShowSettings(tab || 'details')} />
         </main>
         {showPreview && (
           <PreviewPane
@@ -175,7 +175,7 @@ function EditorInner({ initial }) {
           </div>
         </div>
       )}
-      {showSettings && <SettingsSheet doc={doc} set={set} onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsSheet doc={doc} set={set} initialTab={showSettings} onClose={() => setShowSettings(false)} />}
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );

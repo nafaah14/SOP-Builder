@@ -9,7 +9,8 @@ import { writePdf } from '../render/pdfWriter';
 
 const measure = createMeasurer();
 
-const sop = (blocks, patch = {}) => ({ ...newSop('Test'), blocks, ...patch });
+const BODY_ONLY = { cover: false, revisionHistory: false, toc: false, tocDepth: 2 };
+const sop = (blocks, patch = {}) => ({ ...newSop('Test'), front: BODY_ONLY, blocks, ...patch });
 const section = (title) => ({ ...newBlock('section'), title });
 const step = (title, body = '') => ({ ...newBlock('step'), title, body });
 const text = (body) => ({ ...newBlock('text'), body });
@@ -58,7 +59,7 @@ describe('rich text', () => {
 
 describe('pagination', () => {
   it('fits a short SOP on one page with header and footer', () => {
-    const r = layout(newSop('Lockout procedure'), measure);
+    const r = layout({ ...newSop('Lockout procedure'), front: BODY_ONLY }, measure);
     expect(r.pageCount).toBe(1);
     expect(textOf(r.pages[0])).toContain('Page 1 of 1');
   });

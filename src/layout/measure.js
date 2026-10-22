@@ -31,4 +31,8 @@ export function createMeasurer() {
   };
 }
 
+let shared;
+/** One measurer for the whole app — its width cache is worth sharing. */
+export const sharedMeasurer = () => shared || (shared = createMeasurer());
+
 export { styleName };

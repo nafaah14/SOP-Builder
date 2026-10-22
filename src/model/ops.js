@@ -68,3 +68,20 @@ export function restoreBlock(doc, block, index) {
   blocks.splice(Math.min(index, blocks.length), 0, block);
   return withBlocks(doc, blocks);
 }
+
+/** Revision rows drive the document's current revision: the last row is "now". */
+export function setRevisions(doc, revisions) {
+  const last = revisions[revisions.length - 1];
+  return {
+    ...doc,
+    revisions,
+    ...(last ? { revision: last.rev, effectiveDate: last.date || doc.effectiveDate } : {}),
+  };
+}
+
+export function nextRev(rev) {
+  const s = String(rev ?? '').trim();
+  if (/^\d+$/.test(s)) return String(Number(s) + 1);
+  if (/^[A-Y]$/i.test(s)) return String.fromCharCode(s.charCodeAt(0) + 1);
+  return '';
+}
