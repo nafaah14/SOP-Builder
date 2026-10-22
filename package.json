@@ -1,6 +1,6 @@
 {
   "name": "sop-builder",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Build official-quality SOPs: steps, text, tables, annotated photos — laid out and paginated for you, exported to PDF.",
   "private": true,
   "type": "module",
