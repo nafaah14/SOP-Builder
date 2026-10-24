@@ -1,4 +1,5 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useCallback, useRef, useState } from 'react';
+import { useDismiss } from './backdrop';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from './dndModifiers';
@@ -19,12 +20,14 @@ const KINDS = [
 
 function InsertBar({ index, onInsert, always = false }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useDismiss(ref, open, useCallback(() => setOpen(false), []));
   return (
-    <div className={`insert-bar${open ? ' open' : ''}${always ? ' always' : ''}`}>
+    <div ref={ref} className={`insert-bar${open ? ' open' : ''}${always ? ' always' : ''}`}>
       {!open ? (
         <button className="insert-plus" title="Add here" onClick={() => setOpen(true)}><Plus size={14} />{always && <span>Add</span>}</button>
       ) : (
-        <div className="insert-menu" onMouseLeave={() => setOpen(false)}>
+        <div className="insert-menu">
           {KINDS.map(({ kind, label, icon: Icon }) => (
             <button key={kind} className="chip" onClick={() => { onInsert(index, kind); setOpen(false); }}>
               <Icon size={14} /> {label}

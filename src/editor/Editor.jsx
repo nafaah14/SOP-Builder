@@ -14,6 +14,7 @@ import { writePdf, pdfFileName } from '../render/pdfWriter';
 import { exportAssets } from '../render/exportAssets';
 import { putImage, imageDataUrl } from '../storage/images';
 import { fileToPhoto, imageFiles } from './imageUpload';
+import { useBackdrop } from './backdrop';
 import * as ops from '../model/ops';
 import { BLOCK_KINDS, newBlock } from '../model/defaults';
 
@@ -58,6 +59,7 @@ function EditorInner({ initial }) {
   const wide = useMedia(WIDE);
   const [showPreview, setShowPreview] = useState(() => window.matchMedia(WIDE).matches);
   const [showOutline, setShowOutline] = useState(false);
+  const outlineBackdrop = useBackdrop(useCallback(() => setShowOutline(false), []));
   const [showSettings, setShowSettings] = useState(false);
   const [toast, setToast] = useState(null);
   const [saved, setSaved] = useState(true);
@@ -233,8 +235,8 @@ function EditorInner({ initial }) {
       </div>
 
       {!wide && showOutline && (
-        <div className="sheet-scrim" onClick={() => setShowOutline(false)}>
-          <div className="drawer" onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-scrim" {...outlineBackdrop}>
+          <div className="drawer">
             <Outline doc={doc} result={result} act={act} onJump={jump} />
           </div>
         </div>

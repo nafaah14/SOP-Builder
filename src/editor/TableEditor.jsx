@@ -2,9 +2,11 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { MoreHorizontal, Plus } from 'lucide-react';
 import { AutoTextarea } from './AutoTextarea';
 import * as T from '../model/table';
+import { useBackdrop } from './backdrop';
 
 // fixed-position so the table's horizontal scroller can't clip it
 function Menu({ items, onClose, rect }) {
+  const backdrop = useBackdrop(onClose);
   const left = Math.max(8, Math.min(rect.right - 190, window.innerWidth - 198));
   const below = rect.bottom + 4;
   const style = below + 360 > window.innerHeight
@@ -12,7 +14,7 @@ function Menu({ items, onClose, rect }) {
     : { left, top: below };
   return (
     <>
-      <div className="menu-scrim" onClick={onClose} />
+      <div className="menu-scrim" {...backdrop} />
       <div className="menu" role="menu" style={style}>
         {items.map((it, i) => (it === '-' ? <div key={i} className="menu-sep" /> : (
           <button

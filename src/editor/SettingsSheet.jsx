@@ -4,6 +4,7 @@ import { HEADER_FOOTER_TOKENS, PAGE_SIZES, applyTemplate, newId } from '../model
 import { setRevisions, nextRev } from '../model/ops';
 import { listTemplates, getTemplate, saveTemplate } from '../storage/templates';
 import { BrandFields, Field, SlotRow } from './BrandFields';
+import { useBackdrop } from './backdrop';
 
 export const TABS = [
   ['details', 'Details'],
@@ -220,10 +221,11 @@ function Branding({ doc, set }) {
 export function SettingsSheet({ doc, set, onClose, initialTab = 'details' }) {
   const [tab, setTab] = useState(initialTab);
   const patch = (p, key) => set((d) => ({ ...d, ...p }), key);
+  const backdrop = useBackdrop(onClose);
 
   return (
-    <div className="sheet-scrim" onClick={onClose}>
-      <div className="sheet" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Document settings">
+    <div className="sheet-scrim" {...backdrop}>
+      <div className="sheet" role="dialog" aria-label="Document settings">
         <div className="sheet-head">
           <h2>Document</h2>
           <button className="icon-btn" onClick={onClose} title="Close"><X size={18} /></button>
