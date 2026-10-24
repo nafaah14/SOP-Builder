@@ -43,6 +43,13 @@ export function writePdf(result, doc) {
           pdf.setLineWidth(b.lw || 0.3);
         }
         pdf.rect(b.x, b.y, b.w, b.h, b.fill && b.stroke ? 'FD' : b.fill ? 'F' : 'S');
+      } else if (b.t === 'circle') {
+        pdf.setFillColor(...rgb(b.fill));
+        pdf.circle(b.cx, b.cy, b.r, 'F');
+      } else if (b.t === 'tri') {
+        const [[x1, y1], [x2, y2], [x3, y3]] = b.pts;
+        pdf.setFillColor(...rgb(b.fill));
+        pdf.triangle(x1, y1, x2, y2, x3, y3, 'F');
       } else if (b.t === 'image') {
         const fmt = /^data:image\/jpe?g/i.test(b.src) ? 'JPEG' : 'PNG';
         pdf.addImage(b.src, fmt, b.x, b.y, b.w, b.h, aliasOf(b.src), 'FAST');

@@ -1,7 +1,8 @@
 import { pageDims } from '../model/defaults';
-import { computeNumbers } from '../model/numbering';
+import { computeNumbers, attachments } from '../model/numbering';
 import { paginate } from './paginate';
-import { STYLE, fmtDate, lineH, baseline, textRows, bodyRows, headingRows, plainLines, textBox } from './text';
+import { STYLE, fmtDate, lineH, baseline, textRows, bodyRows, headingRows, plainLines, textBox, indentRows } from './text';
+import { calloutRows } from './callout';
 import { tableRows } from './table';
 import { coverBoxes, controlCells, CONTROL_COLUMNS } from './cover';
 import { tocEntries, tocRows } from './toc';
@@ -20,6 +21,7 @@ export { STYLE, fmtDate };
  *   { t:'line', x1, y1, x2, y2, color, lw }
  *   { t:'image', x, y, w, h, src }
  *   { t:'link', x, y, w, h, page }
+ *   { t:'circle', cx, cy, r, fill }    { t:'tri', pts: [[x,y]×3], fill }
  *
  * A document is up to four parts, each starting on a new page: cover,
  * revision history, contents, body. Each flowing part goes through the same
@@ -91,11 +93,46 @@ function blockRows(block, ctx, isFirstSection) {
     case 'text':
       return bodyRows(block.body || '', { width, x0: 0, measure, blockId: id, gapFirst: STYLE.gap.text })
         .filter((r) => r.boxes.length);
+    case 'table':
+    case 'callout': {
+      const dx = ctx.attached[id] ? indent : 0;
+      const w = width - dx;
+      const rows = block.kind === 'table' ? tableBlockRows(block, { ...ctx, width: w }) : calloutRows(block, { width: w, measure, blockId: id, gapFirst: STYLE.gap.block });
+      return indentRows(rows, dx);
+    }
     case 'pageBreak':
       return [{ blockId: id, h: 0, gap: 0, glue: false, forceBreak: true, boxes: [] }];
     default:
       return [];
   }
+}
+
+function tableBlockRows(block, { width, measure, numbers, doc }) {
+  const id = block.id;
+  const rows = [];
+  if (block.caption?.trim()) {
+    const size = 9;
+    const label = `${numbers[id]}  `;
+    const lw = measure.width(label, { size, bold: true });
+    const lines = plainLines(block.caption.trim(), width - lw, measure, size, { bold: true });
+    const cr = textRows(lines, { size, x0: lw, color: STYLE.ink, blockId: id, gapFirst: STYLE.gap.block, glueAll: true });
+    cr[0].boxes.unshift(textBox(0, baseline(size), label, size, doc.style.accent, { bold: true }));
+    cr[cr.length - 1].glue = true;
+    rows.push(...cr);
+  }
+  rows.push(...tableRows({
+    columns: block.columns,
+    cells: block.rows.map((r) => r.cells),
+    width,
+    measure,
+    accent: doc.style.accent,
+    style: tableStyleOf(doc),
+    headerRow: block.headerRow !== false,
+    striped: !!block.striped,
+    blockId: id,
+    gapFirst: rows.length ? 1.2 : STYLE.gap.block,
+  }));
+  return rows;
 }
 
 export const REVISION_COLUMNS = [
@@ -195,7 +232,7 @@ export function layout(doc, measure) {
   const width = dims.w - margins.left - margins.right;
   const frame = { left: margins.left, top: margins.top, height: dims.h - margins.top - margins.bottom };
   const numbers = computeNumbers(doc.blocks);
-  const ctx = { width, measure, numbers, doc };
+  const ctx = { width, measure, numbers, doc, attached: attachments(doc.blocks) };
   const front = doc.front || {};
 
   // ---- body

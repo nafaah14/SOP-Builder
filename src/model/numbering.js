@@ -17,6 +17,30 @@ export function computeNumbers(blocks) {
       out[b.id] = section ? `${section}.${step}` : String(step);
     }
   }
+  // captioned tables are numbered through the whole document: "Table 1", "Table 2"
+  let table = 0;
+  for (const b of blocks) {
+    if (b.kind === 'table' && b.caption?.trim()) out[b.id] = `Table ${++table}`;
+  }
+  return out;
+}
+
+/** Kinds that sit inside the step above them, indented to its text. */
+export const ATTACHABLE = new Set(['table', 'callout', 'pageBreak']);
+
+/**
+ * blockId -> stepId for tables and callouts that follow a step with nothing
+ * but other tables, callouts or page breaks in between. They're laid out at
+ * the step's indent, so a warning placed after step 2.3 visibly belongs to it.
+ */
+export function attachments(blocks) {
+  const out = {};
+  let step = null;
+  for (const b of blocks) {
+    if (b.kind === 'step') step = b.id;
+    else if (!ATTACHABLE.has(b.kind)) step = null;
+    else if (step && b.kind !== 'pageBreak') out[b.id] = step;
+  }
   return out;
 }
 

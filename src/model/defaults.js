@@ -11,12 +11,33 @@ export const BLOCK_KINDS = {
   section: 'Section',
   step: 'Step',
   text: 'Text',
+  table: 'Table',
+  callout: 'Callout',
   pageBreak: 'Page break',
+};
+
+/** Hazard levels follow the usual signal-word order, most severe first. */
+export const CALLOUTS = {
+  danger: { label: 'Danger', color: '#B3261E', icon: 'hazard' },
+  warning: { label: 'Warning', color: '#C2410C', icon: 'hazard' },
+  caution: { label: 'Caution', color: '#A16207', icon: 'hazard' },
+  note: { label: 'Note', color: '#1D4ED8', icon: 'info' },
+  tip: { label: 'Tip', color: '#15803D', icon: 'info' },
 };
 
 export const HEADER_FOOTER_TOKENS = ['{title}', '{docNo}', '{rev}', '{page}', '{pages}', '{date}', '{department}', '{company}'];
 
 export const newId = () => ulid();
+
+export function newTable(cols = 3, rows = 2) {
+  return {
+    caption: '',
+    headerRow: true,
+    striped: false,
+    columns: Array.from({ length: cols }, (_, i) => ({ id: newId(), label: `Column ${i + 1}`, w: 1, align: 'left' })),
+    rows: Array.from({ length: rows }, () => ({ id: newId(), cells: Array(cols).fill('') })),
+  };
+}
 
 export function newBlock(kind) {
   const base = { id: newId(), kind };
@@ -24,6 +45,8 @@ export function newBlock(kind) {
     case 'section': return { ...base, title: '' };
     case 'step': return { ...base, title: '', body: '' };
     case 'text': return { ...base, body: '' };
+    case 'table': return { ...base, ...newTable() };
+    case 'callout': return { ...base, variant: 'warning', title: '', body: '' };
     case 'pageBreak': return base;
     default: throw new Error(`Unknown block kind: ${kind}`);
   }
@@ -88,7 +111,12 @@ export function pageDims(page) {
 
 /** Deep-ish copy of a block with fresh ids — used by duplicate. */
 export function cloneBlock(block) {
-  return { ...structuredClone(block), id: newId() };
+  const b = { ...structuredClone(block), id: newId() };
+  if (b.kind === 'table') {
+    b.columns = b.columns.map((c) => ({ ...c, id: newId() }));
+    b.rows = b.rows.map((r) => ({ ...r, id: newId() }));
+  }
+  return b;
 }
 
 /** A copy of a whole SOP to start a new one from — fresh ids, same content. */

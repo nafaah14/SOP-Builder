@@ -14,7 +14,7 @@ export const STYLE = {
   stepTitleSize: 10.5,
   headerSize: 8,
   tableSize: 9,
-  gap: { section: 8, step: 5, text: 3, para: 1.6, list: 0.6, blank: 3 },
+  gap: { section: 8, step: 5, text: 3, block: 4, para: 1.6, list: 0.6, blank: 3 },
 };
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -94,3 +94,17 @@ export function mix(a, b, t) {
   const [x, y] = [p(a), p(b)];
   return `#${x.map((v, i) => Math.round(v + (y[i] - v) * t).toString(16).padStart(2, '0')).join('')}`;
 }
+
+/** Move a box by (dx, dy), whatever its shape. */
+export function shiftBox(b, dx, dy) {
+  switch (b.t) {
+    case 'line': return { ...b, x1: b.x1 + dx, x2: b.x2 + dx, y1: b.y1 + dy, y2: b.y2 + dy };
+    case 'circle': return { ...b, cx: b.cx + dx, cy: b.cy + dy };
+    case 'tri': return { ...b, pts: b.pts.map(([x, y]) => [x + dx, y + dy]) };
+    default: return { ...b, x: b.x + dx, y: b.y + dy };
+  }
+}
+
+/** Shift every box in a list of rows sideways — content indented under a step. */
+export const indentRows = (rows, dx) =>
+  (dx ? rows.map((r) => ({ ...r, boxes: r.boxes.map((b) => shiftBox(b, dx, 0)), repeat: r.repeat && { ...r.repeat, boxes: r.repeat.boxes.map((b) => shiftBox(b, dx, 0)) } })) : rows);

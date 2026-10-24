@@ -334,3 +334,69 @@ button, input, textarea, select { font: inherit; color: inherit; }
   background: #fff; color: #1B2A41; font-weight: 600; cursor: pointer; white-space: nowrap;
 }
 .link-btn { border: 0; background: transparent; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font-size: inherit; }
+
+/* ---------- attached blocks (tables/callouts under a step) ---------- */
+.block.attached { margin-left: 44px; }
+@media (max-width: 640px) { .block.attached { margin-left: 18px; } }
+
+/* ---------- table editor ---------- */
+.tbl { padding: 0 4px; min-width: 0; }
+.tbl-head { display: flex; align-items: center; gap: 8px; }
+.tbl-num { font-size: 12.5px; font-weight: 700; color: var(--accent-ui); white-space: nowrap; }
+.tbl-caption { flex: 1; border: 0; background: transparent; font-weight: 600; font-size: 14px; padding: 4px 0; outline: none; min-width: 0; }
+.tbl-caption::placeholder { color: var(--muted); font-weight: 400; opacity: .8; }
+.tbl-opts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 8px; }
+.check.sm { font-size: 13px; margin: 0; }
+.chip.sm { padding: 4px 10px; font-size: 12.5px; }
+.tbl-scroll { overflow-x: auto; border: 1px solid var(--rule-strong); border-radius: 8px; }
+.tbl-edit { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 14px; }
+.tbl-edit th, .tbl-edit td { border: 1px solid var(--rule); vertical-align: top; padding: 0; position: relative; }
+.tbl-edit tr > :first-child { border-left: 0; }
+.tbl-edit tr > :last-child { border-right: 0; }
+.tbl-edit thead tr:first-child > *, .tbl-edit tbody tr:first-child > * { border-top: 0; }
+.tbl-edit tbody tr:last-child > * { border-bottom: 0; }
+.tbl-edit thead th { background: color-mix(in srgb, var(--accent-ui) 10%, var(--card)); }
+.th-wrap { display: flex; align-items: flex-start; }
+.th-wrap .icon-btn { margin: 4px 2px 0 0; opacity: .5; }
+.th-wrap:hover .icon-btn, .th-wrap:focus-within .icon-btn { opacity: 1; }
+.cell-ta { padding: 6px 8px; min-height: 32px; font-size: 14px; line-height: 1.4; }
+.th-ta { font-weight: 600; }
+.al-center .cell-ta { text-align: center; }
+.al-right .cell-ta { text-align: right; }
+.cell-ta:focus { background: color-mix(in srgb, var(--accent-ui) 7%, transparent); }
+.row-tools { text-align: center; padding-top: 4px !important; }
+.row-tools .icon-btn { opacity: .45; }
+.tbl-edit tr:hover .row-tools .icon-btn, .row-tools:focus-within .icon-btn { opacity: 1; }
+.tbl-hint { margin-top: 6px; }
+@media (hover: none) { .th-wrap .icon-btn, .row-tools .icon-btn { opacity: .8; } }
+
+.menu-scrim { position: fixed; inset: 0; z-index: 30; }
+.menu {
+  position: fixed; z-index: 31; width: 190px; padding: 4px;
+  background: var(--card); border: 1px solid var(--rule-strong); border-radius: 10px; box-shadow: var(--shadow-lg);
+  text-align: left; font-weight: 400;
+}
+.menu-item { display: block; width: 100%; text-align: left; border: 0; background: transparent; padding: 7px 10px; border-radius: 6px; cursor: pointer; font-size: 13.5px; }
+.menu-item:hover:not(:disabled) { background: var(--hover); }
+.menu-item:disabled { opacity: .35; cursor: default; }
+.menu-item.on { font-weight: 600; }
+.menu-item.on::before { content: '✓ '; }
+.menu-item.danger { color: var(--danger); }
+.menu-sep { height: 1px; background: var(--rule); margin: 4px 0; }
+
+/* ---------- callout editor ---------- */
+.callout-ed { padding: 0 4px; }
+.callout-variants { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.callout-chip {
+  border: 1px solid color-mix(in srgb, var(--c) 45%, var(--rule)); background: transparent; color: var(--ink-2);
+  border-radius: 999px; padding: 3px 10px; font-size: 12.5px; cursor: pointer;
+}
+.callout-chip.on { background: var(--c); border-color: var(--c); color: #fff; font-weight: 600; }
+.callout-box {
+  border-left: 4px solid var(--c); background: color-mix(in srgb, var(--c) 10%, var(--card));
+  border-radius: 6px; padding: 8px 10px 4px;
+}
+.callout-label { display: flex; align-items: center; gap: 8px; color: var(--c); font-weight: 700; font-size: 13px; letter-spacing: .04em; }
+@media (prefers-color-scheme: dark) { .callout-label, .callout-chip:not(.on) { filter: brightness(1.5); } }
+.callout-title { flex: 1; min-width: 0; border: 0; background: transparent; font-weight: 600; font-size: 14px; color: var(--ink); outline: none; letter-spacing: 0; }
+.callout-title::placeholder { color: var(--muted); font-weight: 400; }

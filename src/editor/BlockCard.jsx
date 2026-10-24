@@ -2,6 +2,8 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, ArrowUp, ArrowDown, Copy, Trash2, Scissors } from 'lucide-react';
 import { AutoTextarea } from './AutoTextarea';
+import { TableEditor } from './TableEditor';
+import { CalloutEditor } from './CalloutEditor';
 import { BLOCK_KINDS } from '../model/defaults';
 
 const BODY_HINT = 'One line per paragraph. "- " for bullets, "1. " for numbered, **bold**, *italic*.';
@@ -17,7 +19,7 @@ function Actions({ block, isFirst, isLast, act }) {
   );
 }
 
-export function BlockCard({ block, number, meta, isFirst, isLast, act, accent }) {
+export function BlockCard({ block, number, meta, isFirst, isLast, act, accent, attached }) {
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
   const style = { transform: CSS.Translate.toString(transform), transition, '--accent': accent };
   const upd = (patch, field) => act.update(block.id, patch, `${block.id}:${field}`);
@@ -28,7 +30,7 @@ export function BlockCard({ block, number, meta, isFirst, isLast, act, accent })
       ref={setNodeRef}
       style={style}
       id={`block-${block.id}`}
-      className={`block block-${block.kind}${isDragging ? ' dragging' : ''}`}
+      className={`block block-${block.kind}${attached ? ' attached' : ''}${isDragging ? ' dragging' : ''}`}
     >
       <button className="drag-handle" ref={setActivatorNodeRef} {...attributes} {...listeners} title="Drag to reorder">
         <GripVertical size={16} />
@@ -76,6 +78,14 @@ export function BlockCard({ block, number, meta, isFirst, isLast, act, accent })
             title={BODY_HINT}
             onChange={(v) => upd({ body: v }, 'body')}
           />
+        )}
+
+        {block.kind === 'table' && (
+          <TableEditor block={block} number={number} onChange={(p, key) => act.update(block.id, p, key)} />
+        )}
+
+        {block.kind === 'callout' && (
+          <CalloutEditor block={block} onChange={(p, key) => act.update(block.id, p, key)} />
         )}
 
         {block.kind === 'pageBreak' && (

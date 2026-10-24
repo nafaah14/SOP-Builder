@@ -50,8 +50,10 @@ the next page when they don't fit.
 2. ✅ Cover page (Classic, Corporate band, Minimal), document approval table,
    revision history, auto contents with page numbers and PDF links,
    reusable templates/branding (logo, company, colours, header/footer).
-3. Tables (repeat header row across pages) and callouts (warning, caution,
-   note, tip).
+3. ✅ Tables (paste from Excel/Sheets, column width/alignment, captions
+   numbered "Table N", header row repeated across pages) and callouts
+   (Danger, Warning, Caution, Note, Tip). Tables and callouts placed after a
+   step are indented under it.
 4. Images — camera, upload, paste; placement rules.
 5. Annotation editor — arrows, boxes, circles, highlighter, numbered markers,
    text labels, blur, crop/rotate; non-destructive.

@@ -1,3 +1,5 @@
+import { shiftBox } from './text';
+
 /**
  * Rows in, pages out. A row is one unbreakable strip with a `gap` above it
  * (dropped at the top of a page) and `glue` ("never break after me").
@@ -8,11 +10,6 @@
  * Page numbers in the result are local to this flow (1-based); the engine
  * offsets them once it knows what comes before.
  */
-
-function offsetBox(b, ox, oy, bid) {
-  if (b.t === 'line') return { ...b, bid, x1: b.x1 + ox, x2: b.x2 + ox, y1: b.y1 + oy, y2: b.y2 + oy };
-  return { ...b, bid, x: b.x + ox, y: b.y + oy };
-}
 
 function chunkRows(rows) {
   const chunks = [];
@@ -48,7 +45,7 @@ export function paginate(rows, { left, top, height }) {
     if (y === 0 && row.repeat) place({ ...row.repeat, gap: 0, blockId: row.blockId });
     if (y > 0) y += row.gap;
     const page = pages[pages.length - 1];
-    for (const b of row.boxes) page.boxes.push(offsetBox(b, left, top + y, row.blockId));
+    for (const b of row.boxes) page.boxes.push({ ...shiftBox(b, left, top + y), bid: row.blockId });
     const p = pages.length;
     if (row.blockId) {
       const meta = blocks[row.blockId] || (blocks[row.blockId] = { startPage: p, endPage: p });

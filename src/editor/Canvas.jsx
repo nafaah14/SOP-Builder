@@ -2,14 +2,17 @@ import { Fragment, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from './dndModifiers';
-import { Plus, Heading, ListOrdered, AlignLeft, Scissors, Check, Minus, Palette } from 'lucide-react';
+import { Plus, Heading, ListOrdered, AlignLeft, Scissors, Check, Minus, Palette, Table2, TriangleAlert } from 'lucide-react';
 import { BlockCard } from './BlockCard';
 import { fmtDate } from '../layout/engine';
+import { attachments } from '../model/numbering';
 
 const KINDS = [
   { kind: 'step', label: 'Step', icon: ListOrdered },
   { kind: 'section', label: 'Section', icon: Heading },
   { kind: 'text', label: 'Text', icon: AlignLeft },
+  { kind: 'table', label: 'Table', icon: Table2 },
+  { kind: 'callout', label: 'Callout', icon: TriangleAlert },
   { kind: 'pageBreak', label: 'Page break', icon: Scissors },
 ];
 
@@ -62,6 +65,7 @@ export function Canvas({ doc, result, act, onOpenSettings }) {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
   const markers = result ? markersFor(doc.blocks, result.blocks, result.bodyStartPage) : {};
+  const attached = attachments(doc.blocks);
 
   const onDragEnd = ({ active, over }) => {
     if (!over || active.id === over.id) return;
@@ -115,6 +119,7 @@ export function Canvas({ doc, result, act, onOpenSettings }) {
                 isLast={i === doc.blocks.length - 1}
                 act={act}
                 accent={doc.style.accent}
+                attached={!!attached[b.id]}
               />
               <InsertBar index={i + 1} onInsert={act.insert} always={i === doc.blocks.length - 1} />
             </Fragment>

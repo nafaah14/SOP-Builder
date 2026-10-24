@@ -1,4 +1,4 @@
-import { STYLE, lineH, baseline, plainLines, textBox, mix, fmtDate } from './text';
+import { STYLE, lineH, baseline, plainLines, textBox, mix, fmtDate, shiftBox } from './text';
 import { tableRows, detailRows } from './table';
 import { PT } from './measure';
 
@@ -21,10 +21,7 @@ function stack(rows, x, y) {
   let cy = 0;
   rows.forEach((r, i) => {
     if (i > 0) cy += r.gap;
-    for (const b of r.boxes) {
-      if (b.t === 'line') boxes.push({ ...b, x1: b.x1 + x, x2: b.x2 + x, y1: b.y1 + y + cy, y2: b.y2 + y + cy });
-      else boxes.push({ ...b, x: b.x + x, y: b.y + y + cy });
-    }
+    for (const b of r.boxes) boxes.push(shiftBox(b, x, y + cy));
     cy += r.h;
   });
   return [boxes, cy];

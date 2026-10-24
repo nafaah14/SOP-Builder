@@ -25,6 +25,8 @@ function Box({ b }) {
   if (b.t === 'line') {
     return <line x1={b.x1} y1={b.y1} x2={b.x2} y2={b.y2} stroke={b.color} strokeWidth={b.lw} />;
   }
+  if (b.t === 'circle') return <circle cx={b.cx} cy={b.cy} r={b.r} fill={b.fill} />;
+  if (b.t === 'tri') return <polygon points={b.pts.map((p) => p.join(',')).join(' ')} fill={b.fill} />;
   if (b.t === 'image') {
     return <image href={b.src} x={b.x} y={b.y} width={b.w} height={b.h} preserveAspectRatio="none" />;
   }
