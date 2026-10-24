@@ -15,7 +15,7 @@ function CoverThumb({ template }) {
   const r = useMemo(() => layout(sampleDoc(template), measure), [template]);
   return (
     <div className="tpl-thumb">
-      <PagePreview page={r.pages[0]} w={r.w} h={r.h} number={1} />
+      <PagePreview page={r.pages[0]} w={r.w} h={r.h} number={1} fonts={r.fonts} />
     </div>
   );
 }

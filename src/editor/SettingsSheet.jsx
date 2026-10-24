@@ -3,7 +3,7 @@ import { X, Plus, Trash2, RefreshCw, Save } from 'lucide-react';
 import { HEADER_FOOTER_TOKENS, PAGE_SIZES, applyTemplate, newId } from '../model/defaults';
 import { setRevisions, nextRev } from '../model/ops';
 import { listTemplates, getTemplate, saveTemplate } from '../storage/templates';
-import { BrandFields, Field, SlotRow } from './BrandFields';
+import { BrandFields, Field, SlotRow, FontSelect } from './BrandFields';
 import { useBackdrop } from './backdrop';
 
 export const TABS = [
@@ -118,6 +118,29 @@ function Layout({ doc, set, patch }) {
         </Field>
       )}
 
+      <div className="sheet-section">Text</div>
+      <Field label="Paragraphs">
+        <div className="seg">
+          <button type="button" className={`seg-btn${doc.style.align !== 'left' ? ' on' : ''}`} onClick={() => patchStyle({ align: 'justify' })}>Justified</button>
+          <button type="button" className={`seg-btn${doc.style.align === 'left' ? ' on' : ''}`} onClick={() => patchStyle({ align: 'left' })}>Left aligned</button>
+        </div>
+      </Field>
+      <Field label="Text size">
+        <div className="seg">
+          {[['small', 'Small (9.5 pt)'], ['normal', 'Normal (10 pt)'], ['large', 'Large (11 pt)']].map(([k, l]) => (
+            <button type="button" key={k} className={`seg-btn${(doc.style.textSize || 'normal') === k ? ' on' : ''}`} onClick={() => patchStyle({ textSize: k })}>{l}</button>
+          ))}
+        </div>
+      </Field>
+      <div className="grid-2">
+        <Field label="Body font">
+          <FontSelect value={doc.style.font} onChange={(v) => patchStyle({ font: v })} />
+        </Field>
+        <Field label="Heading font">
+          <FontSelect value={doc.style.headingFont} onChange={(v) => patchStyle({ headingFont: v })} />
+        </Field>
+      </div>
+
       <div className="sheet-section">Page</div>
       <div className="grid-2">
         <Field label="Size">
@@ -165,14 +188,14 @@ function Branding({ doc, set }) {
   const [note, setNote] = useState('');
   useEffect(() => { listTemplates().then(setTemplates); }, []);
 
-  const flat = { ...doc.brand, accent: doc.style.accent };
+  const flat = { ...doc.brand, accent: doc.style.accent, font: doc.style.font, headingFont: doc.style.headingFont };
   const onChange = (p, key) => set((d) => {
-    const { accent, ...brand } = p;
-    return {
-      ...d,
-      style: accent ? { ...d.style, accent } : d.style,
-      brand: { ...d.brand, ...brand },
-    };
+    const { accent, font, headingFont, ...brand } = p;
+    const style = { ...d.style };
+    if (accent) style.accent = accent;
+    if (font) style.font = font;
+    if (headingFont) style.headingFont = headingFont;
+    return { ...d, style, brand: { ...d.brand, ...brand } };
   }, key);
 
   const apply = async () => {
@@ -188,6 +211,7 @@ function Branding({ doc, set }) {
     const t = {
       id: newId(), name, isDefault: false, accent: doc.style.accent, header: doc.header, footer: doc.footer,
       company: doc.brand.company, logo: doc.brand.logo, coverStyle: doc.brand.coverStyle,
+      font: doc.style.font, headingFont: doc.style.headingFont,
       footerNote: doc.brand.footerNote, headerLogo: doc.brand.headerLogo, docType: doc.brand.docType,
     };
     await saveTemplate(t);

@@ -22,9 +22,14 @@ export function parseInline(text) {
   return runs.filter((r) => r.text);
 }
 
-/** body string -> [{ kind: 'p'|'bullet'|'num', n?, runs, gapBefore }] */
+// A line that stops mid-sentence and is followed by one starting in lower
+// case was wrapped by hand (or by whatever it was pasted from): join it.
+const ENDS_SENTENCE = /[.!?:;]["'”’)\]]*$/;
+const CONTINUES = /^[a-z0-9(“‘"']/;
+
+/** body string -> [{ kind: 'p'|'bullet'|'num', n?, runs, blank }] */
 export function parseBody(body = '') {
-  const out = [];
+  const items = [];
   let n = 0;
   let blank = false;
   for (const raw of body.split('\n')) {
@@ -45,33 +50,40 @@ export function parseBody(body = '') {
       text = line.replace(NUMBERED, '');
       n += 1;
     } else {
+      const prev = items[items.length - 1];
+      if (prev && !blank && !ENDS_SENTENCE.test(prev.text) && CONTINUES.test(text)) {
+        prev.text += ` ${text}`;
+        continue;
+      }
       n = 0;
     }
-    out.push({ kind, n: kind === 'num' ? n : undefined, runs: parseInline(text), blank });
+    items.push({ kind, n: kind === 'num' ? n : undefined, text, blank });
     blank = false;
   }
-  return out;
+  return items.map(({ text, ...it }) => ({ ...it, runs: parseInline(text) }));
 }
 
 /**
  * Greedy word wrap over styled runs. Returns lines of positioned runs:
- * [{ runs: [{ text, bold, italic, x }], width }]. Words longer than the
- * line are broken by character so nothing ever overflows the margin.
+ * [{ runs: [{ text, bold, italic, font, x }], width, last }]. Words longer
+ * than the line are broken by character so nothing ever overflows the
+ * margin. With `justify`, every line but a paragraph's last is stretched
+ * to the full width by widening the gaps between words.
  */
-export function wrapRuns(runs, maxW, measure, size) {
+export function wrapRuns(runs, maxW, measure, size, { justify = false } = {}) {
   const words = [];
   for (const r of runs) {
-    const parts = r.text.split(/(\s+)/);
-    for (const p of parts) {
+    for (const p of r.text.split(/(\s+)/)) {
       if (!p) continue;
       if (/^\s+$/.test(p)) {
         if (words.length) words[words.length - 1].space = true;
       } else {
-        words.push({ text: p, bold: r.bold, italic: r.italic, space: false });
+        words.push({ text: p, bold: !!r.bold, italic: !!r.italic, font: r.font, space: false });
       }
     }
   }
 
+  const st = (w) => ({ size, bold: w.bold, italic: w.italic, font: w.font });
   const lines = [];
   let cur = [];
   let x = 0;
@@ -82,15 +94,13 @@ export function wrapRuns(runs, maxW, measure, size) {
   };
 
   for (const w of words) {
-    const st = { size, bold: w.bold, italic: w.italic };
-    let ww = measure.width(w.text, st);
+    let ww = measure.width(w.text, st(w));
     if (ww > maxW) {
-      // break an over-long token by character
       let piece = '';
       for (const ch of w.text) {
         const test = piece + ch;
-        if (x + measure.width(test, st) > maxW && (piece || cur.length)) {
-          if (piece) cur.push({ ...w, text: piece, x, space: false });
+        if (x + measure.width(test, st(w)) > maxW && (piece || cur.length)) {
+          if (piece) cur.push({ ...w, text: piece, x, w: measure.width(piece, st(w)), space: false });
           flush();
           piece = ch;
         } else {
@@ -98,29 +108,43 @@ export function wrapRuns(runs, maxW, measure, size) {
         }
       }
       w.text = piece;
-      ww = measure.width(piece, st);
+      ww = measure.width(piece, st(w));
     }
     if (cur.length && x + ww > maxW) flush();
-    cur.push({ ...w, x });
-    x += ww + (w.space ? measure.width(' ', st) : 0);
+    cur.push({ ...w, x, w: ww });
+    x += ww + (w.space ? measure.width(' ', st(w)) : 0);
   }
   if (cur.length || !lines.length) flush();
 
-  // merge adjacent words of the same style into runs
-  return lines.map((ws) => {
+  return lines.map((ws, li) => {
+    const last = li === lines.length - 1;
+    const end = ws.length ? ws[ws.length - 1].x + ws[ws.length - 1].w : 0;
+    const gaps = ws.slice(0, -1).filter((w) => w.space).length;
+    let stretch = justify && !last && gaps > 0 ? (maxW - end) / gaps : 0;
+    // a line of a few long words would open rivers of white: leave it ragged
+    if (stretch > size * 0.352778 * 1.4) stretch = 0;
+    if (stretch > 0) {
+      // every word its own run, pushed right by the gaps before it
+      let k = 0;
+      const runsOut = ws.map((w) => {
+        const r = { text: w.text, bold: w.bold, italic: w.italic, font: w.font, x: w.x + k * stretch };
+        if (w.space) k += 1;
+        return r;
+      });
+      return { runs: runsOut, width: maxW, last };
+    }
     const merged = [];
     for (const w of ws) {
       const prev = merged[merged.length - 1];
-      if (prev && prev.bold === w.bold && prev.italic === w.italic) {
+      if (prev && prev.bold === w.bold && prev.italic === w.italic && prev.font === w.font) {
         prev.text += w.text;
       } else {
-        merged.push({ text: w.text, bold: w.bold, italic: w.italic, x: w.x });
+        merged.push({ text: w.text, bold: w.bold, italic: w.italic, font: w.font, x: w.x });
       }
       if (w.space) merged[merged.length - 1].text += ' ';
     }
-    const last = merged[merged.length - 1];
-    if (last) last.text = last.text.trimEnd();
-    const width = last ? last.x + measure.width(last.text, { size, bold: last.bold, italic: last.italic }) : 0;
-    return { runs: merged, width };
+    const lastRun = merged[merged.length - 1];
+    if (lastRun) lastRun.text = lastRun.text.trimEnd();
+    return { runs: merged, width: end, last };
   });
 }

@@ -8,8 +8,8 @@ import { writePdf } from '../render/pdfWriter';
 
 const measure = createMeasurer();
 const fonts = {
-  normal: readFileSync(new URL('../../public/fonts/DejaVuSans.ttf', import.meta.url)).toString('base64'),
-  bold: readFileSync(new URL('../../public/fonts/DejaVuSans-Bold.ttf', import.meta.url)).toString('base64'),
+  'dejavu:regular': readFileSync(new URL('../../public/fonts/DejaVuSans.ttf', import.meta.url)).toString('base64'),
+  'dejavu:bold': readFileSync(new URL('../../public/fonts/DejaVuSans-Bold.ttf', import.meta.url)).toString('base64'),
 };
 const sop = (body) => ({
   ...newSop('T'),
@@ -45,10 +45,13 @@ describe('symbols outside Helvetica', () => {
 
   it('embeds DejaVu only when needed', () => {
     const doc = sop('Resistance ≥ 100 MΩ, Δt → 0 ✓');
-    const raw = writePdf(layout(doc, measure), doc, { fonts }).output();
+    const r = layout(doc, measure);
+    expect(r.fontFiles).toEqual(['dejavu:regular']);
+    const raw = writePdf(r, doc, { fonts }).output();
     expect(raw).toContain('/FontFile2');
-    expect(raw).toMatch(/DejaVu/);
+    expect(raw).toMatch(/dejavu/i);
     const plain = sop('Plain');
+    expect(layout(plain, measure).fontFiles).toEqual([]);
     expect(writePdf(layout(plain, measure), plain, { fonts }).output()).not.toContain('/FontFile2');
   });
 });

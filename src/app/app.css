@@ -227,7 +227,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .preview-pages { flex: 1; overflow: auto; padding: 20px 16px 60px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
 .preview-page { max-width: none; flex: none; }
 .preview-page-no { text-align: center; color: #E5E8EC; margin-top: 4px; }
-.page-svg { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); font-family: Helvetica, Arial, 'Liberation Sans', sans-serif; white-space: pre; }
+.page-svg { display: block; width: 100%; height: auto; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); white-space: pre; }
 .page-svg [data-bid] { cursor: pointer; }
 
 /* ---------- sheet ---------- */
@@ -418,3 +418,29 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .img-opts .seg-btn { padding: 5px 10px; font-size: 12.5px; }
 .canvas-scroll.drop-target { outline: 3px dashed color-mix(in srgb, var(--ink) 35%, transparent); outline-offset: -8px; }
 .btn:disabled { opacity: .6; cursor: default; }
+
+/* document fonts, loaded by the preview only when a page uses them */
+@font-face { font-family: 'SOP Inter'; src: url('/fonts/inter/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Inter'; src: url('/fonts/inter/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Inter'; src: url('/fonts/inter/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Inter'; src: url('/fonts/inter/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Roboto'; src: url('/fonts/roboto/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Roboto'; src: url('/fonts/roboto/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Roboto'; src: url('/fonts/roboto/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Roboto'; src: url('/fonts/roboto/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Open Sans'; src: url('/fonts/open-sans/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Open Sans'; src: url('/fonts/open-sans/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Open Sans'; src: url('/fonts/open-sans/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Open Sans'; src: url('/fonts/open-sans/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Lato'; src: url('/fonts/lato/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Lato'; src: url('/fonts/lato/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Lato'; src: url('/fonts/lato/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Lato'; src: url('/fonts/lato/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Source Serif'; src: url('/fonts/source-serif-4/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Source Serif'; src: url('/fonts/source-serif-4/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Source Serif'; src: url('/fonts/source-serif-4/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Source Serif'; src: url('/fonts/source-serif-4/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Merriweather'; src: url('/fonts/merriweather/regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Merriweather'; src: url('/fonts/merriweather/bold.ttf') format('truetype'); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: 'SOP Merriweather'; src: url('/fonts/merriweather/italic.ttf') format('truetype'); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: 'SOP Merriweather'; src: url('/fonts/merriweather/bolditalic.ttf') format('truetype'); font-weight: 700; font-style: italic; font-display: swap; }

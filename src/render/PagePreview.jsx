@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { PT } from '../layout/measure';
 import { useImageUrl } from '../storage/images';
+import { FONTS, FALLBACK } from '../layout/fonts';
 
 /**
  * One page of engine output as SVG in mm units. Every run is placed at the x
@@ -14,7 +15,7 @@ function StoredImage({ b }) {
     : <rect x={b.x} y={b.y} width={b.w} height={b.h} fill="#EEF0F3" />;
 }
 
-function Box({ b }) {
+function Box({ b, fonts }) {
   if (b.t === 'text') {
     return (
       <text
@@ -24,7 +25,7 @@ function Box({ b }) {
         fontWeight={b.bold ? 700 : 400}
         fontStyle={b.italic ? 'italic' : 'normal'}
         fill={b.color}
-        fontFamily={b.font === 'fallback' ? "'DejaVu Sans', sans-serif" : undefined}
+        fontFamily={b.font === 'fallback' ? FALLBACK.css : b.font === 'heading' ? fonts.headingCss : undefined}
         data-bid={b.bid && !b.bid.startsWith('__') ? b.bid : undefined}
       >
         {b.text}
@@ -46,17 +47,20 @@ function Box({ b }) {
   return null;
 }
 
-export const PagePreview = memo(function PagePreview({ page, w, h, number }) {
+const cssOf = (id) => (FONTS[id] || FONTS.helvetica).css;
+
+export const PagePreview = memo(function PagePreview({ page, w, h, number, fonts }) {
+  const f = { bodyCss: cssOf(fonts?.body), headingCss: cssOf(fonts?.heading || fonts?.body) };
   return (
     <svg
       className="page-svg"
       viewBox={`0 0 ${w} ${h}`}
-      style={{ aspectRatio: `${w} / ${h}` }}
+      style={{ aspectRatio: `${w} / ${h}`, fontFamily: f.bodyCss }}
       role="img"
       aria-label={`Page ${number}`}
     >
       <rect x="0" y="0" width={w} height={h} fill="#fff" />
-      {page.boxes.map((b, i) => <Box key={i} b={b} />)}
+      {page.boxes.map((b, i) => <Box key={i} b={b} fonts={f} />)}
     </svg>
   );
 });

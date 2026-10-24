@@ -34,7 +34,7 @@ export function PreviewPane({ result, onClose, onExport, onJump, overlay }) {
       <div className="preview-pages" onClick={onClick}>
         {result.pages.map((p, i) => (
           <div key={i} id={`preview-page-${i + 1}`} className="preview-page" style={{ width: `${zoom * 100}%` }}>
-            <PagePreview page={p} w={result.w} h={result.h} number={i + 1} />
+            <PagePreview page={p} w={result.w} h={result.h} number={i + 1} fonts={result.fonts} />
             <div className="preview-page-no muted small">{i + 1}</div>
           </div>
         ))}

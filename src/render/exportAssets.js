@@ -1,9 +1,11 @@
+import { fontFile } from '../layout/fonts';
+
 /**
  * Everything an export needs beyond the layout itself, fetched only when the
- * document actually uses it: the DejaVu fonts (~1.4MB) for symbols Helvetica
- * lacks, and photos stored outside the document.
+ * document actually uses it: embedded font files (each style separately)
+ * and photos stored outside the document.
  */
-let fontsP = null;
+const fontP = new Map();
 
 const toBase64 = async (blob) => {
   const buf = new Uint8Array(await blob.arrayBuffer());
@@ -12,21 +14,26 @@ const toBase64 = async (blob) => {
   return btoa(s);
 };
 
-function loadFonts() {
-  if (!fontsP) {
-    fontsP = Promise.all(['DejaVuSans.ttf', 'DejaVuSans-Bold.ttf'].map((f) => fetch(`/fonts/${f}`).then((r) => {
-      if (!r.ok) throw new Error(`font ${f}: ${r.status}`);
-      return r.blob();
-    }).then(toBase64)))
-      .then(([normal, bold]) => ({ normal, bold }))
-      .catch((e) => { fontsP = null; throw e; });
+function loadFont(key) {
+  if (!fontP.has(key)) {
+    const [fam, st] = key.split(':');
+    const p = fetch(fontFile(fam, st))
+      .then((r) => {
+        if (!r.ok) throw new Error(`font ${key}: ${r.status}`);
+        return r.blob();
+      })
+      .then(toBase64)
+      .catch((e) => { fontP.delete(key); throw e; });
+    fontP.set(key, p);
   }
-  return fontsP;
+  return fontP.get(key);
 }
 
 export async function exportAssets(result, { loadImage } = {}) {
   const assets = {};
-  if (result.usesFallback) assets.fonts = await loadFonts();
+  if (result.fontFiles?.length) {
+    assets.fonts = Object.fromEntries(await Promise.all(result.fontFiles.map(async (k) => [k, await loadFont(k)])));
+  }
   const ids = new Set();
   for (const p of result.pages) for (const b of p.boxes) if (b.t === 'image' && b.imageId) ids.add(b.imageId);
   if (ids.size && loadImage) {

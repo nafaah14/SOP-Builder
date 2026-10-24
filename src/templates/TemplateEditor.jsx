@@ -52,8 +52,8 @@ export function TemplateEditor() {
           <BrandFields value={t} onChange={onChange} showHeaderFooter />
         </div>
         <div className="tpl-previews">
-          <div className="tpl-preview-page"><PagePreview page={r.pages[0]} w={r.w} h={r.h} number={1} /><div className="muted small">Cover</div></div>
-          {body && <div className="tpl-preview-page"><PagePreview page={body} w={r.w} h={r.h} number={2} /><div className="muted small">Procedure page</div></div>}
+          <div className="tpl-preview-page"><PagePreview page={r.pages[0]} w={r.w} h={r.h} number={1} fonts={r.fonts} /><div className="muted small">Cover</div></div>
+          {body && <div className="tpl-preview-page"><PagePreview page={body} w={r.w} h={r.h} number={2} fonts={r.fonts} /><div className="muted small">Procedure page</div></div>}
         </div>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import { styleName } from '../layout/measure';
+import { FONTS } from '../layout/fonts';
 
 const rgb = (hex) => {
   const h = hex.replace('#', '');
@@ -17,7 +18,7 @@ const aliasOf = (src) => {
 /**
  * Draws the engine's page boxes into a jsPDF document. No layout decisions
  * happen here. `assets` carries what the boxes reference but the engine
- * doesn't hold: { fonts: { normal, bold } (base64 TTF), images: { id: dataUrl } }.
+ * doesn't hold: { fonts: { 'family:style': base64 TTF }, images: { id: dataUrl } }.
  */
 export function writePdf(result, doc, assets = {}) {
   const pdf = new jsPDF({
@@ -27,20 +28,35 @@ export function writePdf(result, doc, assets = {}) {
     compress: true,
   });
   pdf.setProperties({ title: doc.title || 'SOP', subject: doc.docNo || '', creator: 'SOP Builder' });
-  const fallback = !!(result.usesFallback && assets.fonts);
-  if (fallback) {
-    for (const style of ['normal', 'bold']) {
-      pdf.addFileToVFS(`DejaVu-${style}.ttf`, assets.fonts[style]);
-      pdf.addFont(`DejaVu-${style}.ttf`, 'DejaVu', style);
-    }
+  const loaded = new Set();
+  // register only what the layout uses: jsPDF embeds every font it's given
+  for (const key of result.fontFiles || []) {
+    const b64 = assets.fonts?.[key];
+    if (!b64) continue;
+    const [fam, st] = key.split(':');
+    pdf.addFileToVFS(`${fam}-${st}.ttf`, b64);
+    pdf.addFont(`${fam}-${st}.ttf`, fam, st === 'regular' ? 'normal' : st);
+    loaded.add(key);
   }
+  const fonts = result.fonts || { body: 'helvetica', heading: 'helvetica' };
+  const setFont = (b) => {
+    if (b.font === 'fallback') {
+      const st = b.bold ? 'bold' : 'regular';
+      if (loaded.has(`dejavu:${st}`)) return pdf.setFont('dejavu', st === 'regular' ? 'normal' : st);
+      return pdf.setFont('helvetica', styleName(b.bold, b.italic));
+    }
+    const fam = b.font === 'heading' ? fonts.heading : fonts.body;
+    const f = FONTS[fam];
+    const st = styleName(b.bold, b.italic);
+    if (f && !f.builtin && loaded.has(`${fam}:${st === 'normal' ? 'regular' : st}`)) return pdf.setFont(fam, st);
+    return pdf.setFont(f?.builtin || 'helvetica', st);
+  };
 
   result.pages.forEach((page, i) => {
     if (i > 0) pdf.addPage();
     for (const b of page.boxes) {
       if (b.t === 'text') {
-        if (b.font === 'fallback' && fallback) pdf.setFont('DejaVu', b.bold ? 'bold' : 'normal');
-        else pdf.setFont('helvetica', styleName(b.bold, b.italic));
+        setFont(b);
         pdf.setFontSize(b.size);
         pdf.setTextColor(...rgb(b.color));
         pdf.text(b.text, b.x, b.y, { baseline: 'alphabetic' });

@@ -23,13 +23,14 @@ Run `npm test` and `npm run build` before committing anything non-trivial.
   document into positioned page boxes. The preview (`render/PagePreview.jsx`)
   and the PDF (`render/pdfWriter.js`) only draw those boxes — never make a
   layout decision in a renderer, or the preview and PDF drift apart.
-- Text is measured with jsPDF's Helvetica metrics (`layout/measure.js`) on
-  both sides. If fonts change, change them in the measurer and the writer
-  together.
-- Text outside WinAnsi is split into runs drawn in DejaVu Sans
-  (`layout/winansi.js`). Widths come from `layout/fallbackWidths.json`;
-  regenerate it with `node scripts/gen-fallback-widths.mjs` if the fonts in
-  `public/fonts/` change. Fonts are fetched only at export when used.
+- Fonts are listed in `layout/fonts.js`: built-ins (Helvetica, Times) use
+  jsPDF's metrics; embedded families use generated width tables in
+  `layout/fonts/*.json` — regenerate with `node scripts/gen-font-metrics.mjs`
+  whenever a TTF in `public/fonts/` changes. Text boxes carry a font *role*
+  (body, `heading`, `fallback`); the document maps roles to families.
+- Characters the chosen font can't draw are split into runs drawn in DejaVu
+  Sans (`layout/winansi.js`). Font files are fetched only for preview/export
+  when a document uses them, and only those are embedded.
 - Photos are stored in the IndexedDB `images` store and referenced by
   `imageId`; layout boxes carry the id and `render/exportAssets.js` loads
   the data for the PDF.

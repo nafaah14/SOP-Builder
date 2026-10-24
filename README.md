@@ -60,6 +60,10 @@ the next page when they don't fit.
    screenshot, or drop files on the canvas. Sized Small/Medium/Large/Full,
    centred, height-capped, never split; captions numbered "Figure N".
    Stored once per device in IndexedDB, outside the document.
+   4.1 ✅ Typography: body and heading fonts (Helvetica, Times, Inter, Roboto,
+   Open Sans, Lato, Source Serif, Merriweather), text size, justified
+   paragraphs, hand-wrapped lines joined back into paragraphs; cover styles
+   Bordered, Sidebar and Centred.
 5. Annotation editor — arrows, boxes, circles, highlighter, numbered markers,
    text labels, blur, crop/rotate; non-destructive.
 6. Google Drive sync, `.sop` backup files, PWA install, Cloudflare Pages.

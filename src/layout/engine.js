@@ -4,6 +4,7 @@ import { paginate } from './paginate';
 import { STYLE, fmtDate, lineH, baseline, textRows, bodyRows, headingRows, plainLines, textBox, indentRows } from './text';
 import { calloutRows } from './callout';
 import { needsFallback, segments } from './winansi';
+import { FONTS, styleKey } from './fonts';
 import { tableRows } from './table';
 import { coverBoxes, controlCells, CONTROL_COLUMNS } from './cover';
 import { tocEntries, tocRows } from './toc';
@@ -31,7 +32,7 @@ export { STYLE, fmtDate };
 
 function titleBlockRows(doc, { width, measure }) {
   const rows = [];
-  const lines = plainLines(doc.title || 'Untitled SOP', width, measure, STYLE.titleSize, { bold: true });
+  const lines = plainLines(doc.title || 'Untitled SOP', width, measure, STYLE.titleSize, { bold: true, font: 'heading' });
   rows.push(...textRows(lines, { size: STYLE.titleSize, x0: 0, color: doc.style.accent, blockId: '__title', gapFirst: 0, glueAll: true }));
   const meta = [
     doc.docNo && `Doc No. ${doc.docNo}`,
@@ -61,9 +62,9 @@ function blockRows(block, ctx, isFirstSection) {
   switch (block.kind) {
     case 'section': {
       const size = STYLE.sectionSize;
-      const lines = plainLines((block.title || 'Untitled section').toUpperCase(), width - indent, measure, size, { bold: true });
+      const lines = plainLines((block.title || 'Untitled section').toUpperCase(), width - indent, measure, size, { bold: true, font: 'heading' });
       const rows = textRows(lines, { size, x0: indent, color: accent, blockId: id, gapFirst: STYLE.gap.section, glueAll: true });
-      rows[0].boxes.unshift(textBox(0, baseline(size), numbers[id], size, accent, { bold: true }));
+      rows[0].boxes.unshift(textBox(0, baseline(size), numbers[id], size, accent, { bold: true, font: 'heading' }));
       rows.push({
         blockId: id, h: 2.5, gap: 0.5, glue: true,
         boxes: [{ t: 'line', x1: 0, y1: 0.4, x2: width, y2: 0.4, color: STYLE.rule, lw: 0.3 }],
@@ -73,26 +74,26 @@ function blockRows(block, ctx, isFirstSection) {
     }
     case 'step': {
       const gapFirst = STYLE.gap.step;
-      const numBox = (size) => textBox(0, baseline(size), numbers[id], size, accent, { bold: true });
+      const numBox = (size, font = 'heading') => textBox(0, baseline(size), numbers[id], size, accent, { bold: true, font });
       const rows = [];
       if (block.title?.trim()) {
-        const size = STYLE.stepTitleSize;
-        const lines = plainLines(block.title.trim(), width - indent, measure, size, { bold: true });
+        const size = ctx.bodySize + 0.5;
+        const lines = plainLines(block.title.trim(), width - indent, measure, size, { bold: true, font: 'heading' });
         const tr = textRows(lines, { size, x0: indent, color: STYLE.ink, blockId: id, gapFirst, glueAll: true });
         tr[0].boxes.unshift(numBox(size));
         rows.push(...tr);
       }
-      const br = bodyRows(block.body || '', { width: width - indent, x0: indent, measure, blockId: id, gapFirst: rows.length ? 1 : gapFirst })
+      const br = bodyRows(block.body || '', { width: width - indent, x0: indent, measure, blockId: id, gapFirst: rows.length ? 1 : gapFirst, size: ctx.bodySize, justify: ctx.justify })
         .filter((r) => r.boxes.length);
       if (!rows.length) {
-        if (!br.length) return [{ blockId: id, h: lineH(STYLE.body), gap: gapFirst, glue: false, boxes: [numBox(STYLE.body)] }];
-        br[0].boxes.unshift(numBox(STYLE.body));
+        if (!br.length) return [{ blockId: id, h: lineH(ctx.bodySize), gap: gapFirst, glue: false, boxes: [numBox(ctx.bodySize, undefined)] }];
+        br[0].boxes.unshift(numBox(ctx.bodySize, undefined));
       }
       rows.push(...br);
       return rows;
     }
     case 'text':
-      return bodyRows(block.body || '', { width, x0: 0, measure, blockId: id, gapFirst: STYLE.gap.text })
+      return bodyRows(block.body || '', { width, x0: 0, measure, blockId: id, gapFirst: STYLE.gap.text, size: ctx.bodySize, justify: ctx.justify })
         .filter((r) => r.boxes.length);
     case 'table':
     case 'callout':
@@ -101,7 +102,7 @@ function blockRows(block, ctx, isFirstSection) {
       const w = width - dx;
       const rows = block.kind === 'table' ? tableBlockRows(block, { ...ctx, width: w })
         : block.kind === 'image' ? imageRows(block, { ...ctx, width: w })
-          : calloutRows(block, { width: w, measure, blockId: id, gapFirst: STYLE.gap.block });
+          : calloutRows(block, { width: w, measure, blockId: id, gapFirst: STYLE.gap.block, size: ctx.bodySize, justify: ctx.justify });
       return indentRows(rows, dx);
     }
     case 'pageBreak':
@@ -275,20 +276,27 @@ function headerFooterBoxes(doc, dims, page, pages, measure) {
 /** One text box -> several, each run of non-Helvetica characters marked font:'fallback'. */
 function splitFallback(b, measure) {
   let x = b.x;
-  return segments(b.text).map((seg) => {
+  return segments(b.text, measure.covers(b.font)).map((seg) => {
     const box = { ...b, text: seg.text, x, ...(seg.fallback ? { font: 'fallback' } : {}) };
-    x += measure.width(seg.text, b);
+    x += measure.width(seg.text, box);
     return box;
   });
 }
 
-export function layout(doc, measure) {
+export const TEXT_SIZES = { small: 9.5, normal: 10, large: 11 };
+
+export function layout(doc, measureRoot) {
+  const measure = measureRoot.forDoc({ body: doc.style.font, heading: doc.style.headingFont });
   const dims = pageDims(doc.page);
   const { margins } = doc.page;
   const width = dims.w - margins.left - margins.right;
   const frame = { left: margins.left, top: margins.top, height: dims.h - margins.top - margins.bottom };
   const numbers = computeNumbers(doc.blocks);
-  const ctx = { width, measure, numbers, doc, attached: attachments(doc.blocks), contentH: frame.height };
+  const ctx = {
+    width, measure, numbers, doc, attached: attachments(doc.blocks), contentH: frame.height,
+    bodySize: TEXT_SIZES[doc.style.textSize] || TEXT_SIZES.normal,
+    justify: doc.style.align !== 'left',
+  };
   const front = doc.front || {};
 
   // ---- body
@@ -328,11 +336,22 @@ export function layout(doc, measure) {
     if (pg.kind !== 'cover') pg.boxes.push(...headerFooterBoxes(doc, dims, i + 1, total, measure));
   });
 
+  // characters the chosen font can't draw go to the fallback font; then
+  // note which embedded font files the PDF will need
+  const fontFiles = new Set();
   let usesFallback = false;
   for (const pg of pages) {
-    if (!pg.boxes.some((b) => b.t === 'text' && needsFallback(b.text))) continue;
-    usesFallback = true;
-    pg.boxes = pg.boxes.flatMap((b) => (b.t === 'text' && needsFallback(b.text) ? splitFallback(b, measure) : [b]));
+    pg.boxes = pg.boxes.flatMap((b) => (b.t === 'text' && b.font !== 'fallback' && needsFallback(b.text, measure.covers(b.font)) ? splitFallback(b, measure) : [b]));
+    for (const b of pg.boxes) {
+      if (b.t !== 'text') continue;
+      if (b.font === 'fallback') {
+        usesFallback = true;
+        fontFiles.add(`dejavu:${b.bold ? 'bold' : 'regular'}`);
+      } else {
+        const fam = measure.family(b.font);
+        if (!FONTS[fam].builtin) fontFiles.add(`${fam}:${styleKey(b.bold, b.italic)}`);
+      }
+    }
   }
 
   const blocks = {};
@@ -340,5 +359,5 @@ export function layout(doc, measure) {
     blocks[id] = { startPage: m.startPage + offset, endPage: m.endPage + offset };
   }
 
-  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total, bodyStartPage: offset + 1, usesFallback };
+  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total, bodyStartPage: offset + 1, usesFallback, fonts: measure.fonts, fontFiles: [...fontFiles] };
 }

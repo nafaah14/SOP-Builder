@@ -1,6 +1,6 @@
 import { ulid } from 'ulid';
 
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 export const PAGE_SIZES = {
   A4: { w: 210, h: 297, label: 'A4' },
@@ -62,6 +62,15 @@ export function newBlock(kind) {
   }
 }
 
+export const DEFAULT_STYLE = {
+  accent: '#1B2A41',
+  sectionNewPage: false,
+  font: 'helvetica',
+  headingFont: 'helvetica',
+  textSize: 'normal',
+  align: 'justify',
+};
+
 export const DEFAULT_FRONT = { cover: true, revisionHistory: true, toc: true, tocDepth: 2 };
 export const DEFAULT_BRAND = {
   company: '',
@@ -98,10 +107,7 @@ export function newSop(title = 'Untitled SOP', template = null) {
       orientation: 'portrait',
       margins: { top: 25, right: 20, bottom: 22, left: 20 },
     },
-    style: {
-      accent: '#1B2A41',
-      sectionNewPage: false,
-    },
+    style: { ...DEFAULT_STYLE },
     header: { left: '{title}', center: '', right: '{docNo} Rev {rev}' },
     footer: { left: '{department}', center: '', right: 'Page {page} of {pages}' },
     blocks: [
@@ -149,7 +155,12 @@ export function applyTemplate(doc, t) {
   return {
     ...doc,
     templateId: t.id,
-    style: { ...doc.style, accent: t.accent || doc.style.accent },
+    style: {
+      ...doc.style,
+      accent: t.accent || doc.style.accent,
+      font: t.font || doc.style.font,
+      headingFont: t.headingFont || t.font || doc.style.headingFont,
+    },
     header: { ...t.header },
     footer: { ...t.footer },
     brand: {

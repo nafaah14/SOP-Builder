@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { ImagePlus, Trash2 } from 'lucide-react';
 import { HEADER_FOOTER_TOKENS } from '../model/defaults';
 import { COVER_STYLES } from '../layout/cover';
+import { FONTS } from '../layout/fonts';
 import { fileToImage } from './imageUpload';
 
 export const ACCENTS = ['#1B2A41', '#0E4C92', '#1F6F50', '#8A1C1C', '#B8541F', '#5B3A86', '#333333'];
@@ -13,6 +14,21 @@ export function Field({ label, children, hint }) {
       {children}
       {hint && <span className="field-hint">{hint}</span>}
     </label>
+  );
+}
+
+export function FontSelect({ value, onChange }) {
+  const groups = ['Sans', 'Serif'];
+  return (
+    <select className="input" value={value || 'helvetica'} onChange={(e) => onChange(e.target.value)} style={{ fontFamily: FONTS[value]?.css }}>
+      {groups.map((g) => (
+        <optgroup key={g} label={g === 'Sans' ? 'Sans-serif' : 'Serif'}>
+          {Object.entries(FONTS).filter(([, f]) => f.kind === g).map(([id, f]) => (
+            <option key={id} value={id} style={{ fontFamily: f.css }}>{f.label}{f.builtin ? ' (built-in)' : ''}</option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
   );
 }
 
@@ -37,7 +53,7 @@ export function SlotRow({ label, value, onChange }) {
 
 /**
  * Branding fields shared by the template editor and an SOP's Branding tab.
- * `value` is flat: { company, logo, accent, coverStyle, footerNote, headerLogo, docType, header?, footer? }.
+ * `value` is flat: { company, logo, accent, font, headingFont, coverStyle, footerNote, headerLogo, docType, header?, footer? }.
  */
 export function BrandFields({ value, onChange, showHeaderFooter = false }) {
   const fileRef = useRef(null);
@@ -76,6 +92,14 @@ export function BrandFields({ value, onChange, showHeaderFooter = false }) {
           ))}
         </div>
       </Field>
+      <div className="grid-2">
+        <Field label="Body font">
+          <FontSelect value={value.font} onChange={(v) => onChange({ font: v })} />
+        </Field>
+        <Field label="Heading font">
+          <FontSelect value={value.headingFont || value.font} onChange={(v) => onChange({ headingFont: v })} />
+        </Field>
+      </div>
       <Field label="Accent colour">
         <div className="swatches">
           {ACCENTS.map((c) => (

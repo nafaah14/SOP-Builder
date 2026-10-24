@@ -11,7 +11,6 @@ export const STYLE = {
   bulletIndent: 5,
   titleSize: 18,
   sectionSize: 13,
-  stepTitleSize: 10.5,
   headerSize: 8,
   tableSize: 9,
   gap: { section: 8, step: 5, text: 3, block: 4, para: 1.6, list: 0.6, blank: 3 },
@@ -31,13 +30,13 @@ export const baseline = (size) => {
   return (lineH(size) - s) / 2 + s * 0.78;
 };
 
-export const textBox = (x, y, text, size, color, { bold = false, italic = false } = {}) => ({
-  t: 'text', x, y, text, size, bold, italic, color,
+export const textBox = (x, y, text, size, color, { bold = false, italic = false, font } = {}) => ({
+  t: 'text', x, y, text, size, bold, italic, color, ...(font ? { font } : {}),
 });
 
 /** Wrapped single-style text -> positioned lines, for headings and table cells. */
 export function plainLines(text, width, measure, size, style = {}) {
-  return wrapRuns([{ text: text || '', bold: !!style.bold, italic: !!style.italic }], width, measure, size);
+  return wrapRuns([{ text: text || '', bold: !!style.bold, italic: !!style.italic, font: style.font }], width, measure, size);
 }
 
 export function textRows(lines, { size, x0, color, blockId, gapFirst, glueAll = false }) {
@@ -53,13 +52,12 @@ export function textRows(lines, { size, x0, color, blockId, gapFirst, glueAll = 
   })).map((row, i, arr) => (i === arr.length - 1 ? { ...row, glue: glueAll } : row));
 }
 
-export function bodyRows(body, { width, x0, measure, blockId, gapFirst }) {
-  const size = STYLE.body;
+export function bodyRows(body, { width, x0, measure, blockId, gapFirst, size = STYLE.body, justify = false }) {
   const rows = [];
   const paras = parseBody(body);
   paras.forEach((p, pi) => {
     const listIndent = p.kind === 'p' ? 0 : STYLE.bulletIndent;
-    const lines = wrapRuns(p.runs, width - listIndent, measure, size);
+    const lines = wrapRuns(p.runs, width - listIndent, measure, size, { justify });
     const inList = p.kind !== 'p' && paras[pi - 1]?.kind !== 'p';
     const gap = pi === 0 ? gapFirst : p.blank ? STYLE.gap.blank : inList ? STYLE.gap.list : STYLE.gap.para;
     const pr = textRows(lines, { size, x0: x0 + listIndent, color: STYLE.ink, blockId, gapFirst: gap });
@@ -75,7 +73,7 @@ export function bodyRows(body, { width, x0, measure, blockId, gapFirst }) {
 /** An unnumbered heading in the section style — "Revision history", "Contents". */
 export function headingRows(title, { width, measure, accent, blockId }) {
   const size = STYLE.sectionSize;
-  const lines = plainLines(title.toUpperCase(), width, measure, size, { bold: true });
+  const lines = plainLines(title.toUpperCase(), width, measure, size, { bold: true, font: 'heading' });
   const rows = textRows(lines, { size, x0: 0, color: accent, blockId, gapFirst: 0, glueAll: true });
   rows.push({
     blockId, h: 4, gap: 0.5, glue: true,

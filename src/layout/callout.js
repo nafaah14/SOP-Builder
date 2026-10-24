@@ -25,7 +25,7 @@ function icon(kind, cx, top, color) {
   ];
 }
 
-export function calloutRows(block, { width, measure, blockId, gapFirst }) {
+export function calloutRows(block, { width, measure, blockId, gapFirst, size, justify }) {
   const def = CALLOUTS[block.variant] || CALLOUTS.note;
   const fill = mix(def.color, '#ffffff', 0.9);
   const textX = BAR + PAD + ICON + PAD;
@@ -48,7 +48,7 @@ export function calloutRows(block, { width, measure, blockId, gapFirst }) {
   head.push(...icon(def.icon, BAR + PAD + ICON / 2, PAD, def.color));
   rows.push({ blockId, h: PAD + labelRows * lh, gap: gapFirst, glue: true, boxes: head });
 
-  const body = bodyRows(block.body || '', { width: textW, x0: textX, measure, blockId, gapFirst: 0.8 }).filter((r) => r.boxes.length);
+  const body = bodyRows(block.body || '', { width: textW, x0: textX, measure, blockId, gapFirst: 0.8, size, justify }).filter((r) => r.boxes.length);
   // fold each row's gap into its height so the background has no holes
   for (const r of body) {
     rows.push({ ...r, h: r.h + r.gap, gap: 0, boxes: r.boxes.map((b) => ({ ...b, y: b.y + r.gap })) });

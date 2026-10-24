@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { layout } from './engine';
 import { createMeasurer } from './measure';
-import { newSop, newBlock, applyTemplate } from '../model/defaults';
+import { newSop, newBlock, applyTemplate, SCHEMA_VERSION } from '../model/defaults';
 import { migrate } from '../model/migrate';
 import { PRESETS } from '../templates/presets';
 import { writePdf } from '../render/pdfWriter';
@@ -135,7 +135,9 @@ describe('templates and migration', () => {
     delete v1.front; delete v1.control; delete v1.revisions; delete v1.brand; delete v1.reviewDate;
     v1.schemaVersion = 1;
     const d = migrate(v1);
-    expect(d.schemaVersion).toBe(2);
+    expect(d.schemaVersion).toBe(SCHEMA_VERSION);
+    expect(d.style.align).toBe('justify');
+    expect(d.style.font).toBe('helvetica');
     expect(d.blocks).toEqual(v1.blocks);
     expect(d.front.cover).toBe(true);
     expect(d.control.prepared.name).toBe('');
@@ -143,7 +145,7 @@ describe('templates and migration', () => {
   });
 
   it('every cover style lays out on A4 portrait and Letter landscape', () => {
-    for (const style of ['classic', 'band', 'minimal']) {
+    for (const style of ['classic', 'band', 'minimal', 'boxed', 'sidebar', 'centered']) {
       for (const page of [{ size: 'A4', orientation: 'portrait' }, { size: 'Letter', orientation: 'landscape' }]) {
         const doc = bigSop(1, 1);
         doc.brand = { ...doc.brand, coverStyle: style, company: 'Acme', logo: { dataUrl: PNG, w: 4, h: 1 } };
