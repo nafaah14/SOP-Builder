@@ -1,8 +1,9 @@
-import { pageDims } from '../model/defaults';
+import { pageDims, IMAGE_SIZES } from '../model/defaults';
 import { computeNumbers, attachments } from '../model/numbering';
 import { paginate } from './paginate';
 import { STYLE, fmtDate, lineH, baseline, textRows, bodyRows, headingRows, plainLines, textBox, indentRows } from './text';
 import { calloutRows } from './callout';
+import { needsFallback, segments } from './winansi';
 import { tableRows } from './table';
 import { coverBoxes, controlCells, CONTROL_COLUMNS } from './cover';
 import { tocEntries, tocRows } from './toc';
@@ -19,7 +20,7 @@ export { STYLE, fmtDate };
  *   { t:'text', x, y (baseline), text, size (pt), bold, italic, color }
  *   { t:'rect', x, y, w, h, fill?, stroke?, lw? }
  *   { t:'line', x1, y1, x2, y2, color, lw }
- *   { t:'image', x, y, w, h, src }
+ *   { t:'image', x, y, w, h, src | imageId }  (imageId: a stored photo)
  *   { t:'link', x, y, w, h, page }
  *   { t:'circle', cx, cy, r, fill }    { t:'tri', pts: [[x,y]×3], fill }
  *
@@ -94,10 +95,13 @@ function blockRows(block, ctx, isFirstSection) {
       return bodyRows(block.body || '', { width, x0: 0, measure, blockId: id, gapFirst: STYLE.gap.text })
         .filter((r) => r.boxes.length);
     case 'table':
-    case 'callout': {
+    case 'callout':
+    case 'image': {
       const dx = ctx.attached[id] ? indent : 0;
       const w = width - dx;
-      const rows = block.kind === 'table' ? tableBlockRows(block, { ...ctx, width: w }) : calloutRows(block, { width: w, measure, blockId: id, gapFirst: STYLE.gap.block });
+      const rows = block.kind === 'table' ? tableBlockRows(block, { ...ctx, width: w })
+        : block.kind === 'image' ? imageRows(block, { ...ctx, width: w })
+          : calloutRows(block, { width: w, measure, blockId: id, gapFirst: STYLE.gap.block });
       return indentRows(rows, dx);
     }
     case 'pageBreak':
@@ -105,6 +109,48 @@ function blockRows(block, ctx, isFirstSection) {
     default:
       return [];
   }
+}
+
+/** Most of a page, so a tall portrait photo never leaves room for nothing else. */
+export const IMAGE_MAX_H = 0.6;
+
+/**
+ * A photo is one unbreakable row, centred, sized as a share of the column
+ * and capped in height; its caption is glued underneath. With no photo yet
+ * the space is held by a grey placeholder so pagination is already right.
+ */
+function imageRows(block, { width, measure, numbers, contentH }) {
+  const id = block.id;
+  const ratio = block.w && block.h ? block.h / block.w : 0.75;
+  let w = width * (IMAGE_SIZES[block.size]?.frac ?? 0.75);
+  let h = w * ratio;
+  const maxH = contentH * IMAGE_MAX_H;
+  if (h > maxH) {
+    h = maxH;
+    w = h / ratio;
+  }
+  const x = (width - w) / 2;
+  const boxes = block.imageId
+    ? [{ t: 'image', x, y: 0, w, h, imageId: block.imageId }]
+    : [{ t: 'rect', x, y: 0, w, h, fill: '#EEF0F3' }, textBox(x + w / 2 - measure.width('Photo', { size: 9 }) / 2, h / 2 + 1, 'Photo', 9, STYLE.muted)];
+  if (block.frame !== false && block.imageId) boxes.push({ t: 'rect', x, y: 0, w, h, stroke: '#B8BEC7', lw: 0.25 });
+  const rows = [{ blockId: id, h, gap: STYLE.gap.block, glue: false, boxes }];
+
+  if (block.caption?.trim()) {
+    const size = 9;
+    const label = `${numbers[id]}  `;
+    const lw = measure.width(label, { size, bold: true });
+    const lines = plainLines(block.caption.trim(), Math.max(40, width - lw), measure, size, { italic: true });
+    lines.forEach((ln, i) => {
+      const lineW = (i === 0 ? lw : 0) + ln.width;
+      const x0 = (width - lineW) / 2 + (i === 0 ? lw : 0);
+      const bx = ln.runs.map((r) => textBox(x0 + r.x, baseline(size), r.text, size, STYLE.ink, { italic: true }));
+      if (i === 0) bx.unshift(textBox(x0 - lw, baseline(size), label, size, STYLE.ink, { bold: true }));
+      rows.push({ blockId: id, h: lineH(size), gap: i === 0 ? 1.5 : 0, glue: false, boxes: bx });
+    });
+    rows.forEach((r, i) => { r.glue = i < rows.length - 1; });
+  }
+  return rows;
 }
 
 function tableBlockRows(block, { width, measure, numbers, doc }) {
@@ -226,13 +272,23 @@ function headerFooterBoxes(doc, dims, page, pages, measure) {
   return out;
 }
 
+/** One text box -> several, each run of non-Helvetica characters marked font:'fallback'. */
+function splitFallback(b, measure) {
+  let x = b.x;
+  return segments(b.text).map((seg) => {
+    const box = { ...b, text: seg.text, x, ...(seg.fallback ? { font: 'fallback' } : {}) };
+    x += measure.width(seg.text, b);
+    return box;
+  });
+}
+
 export function layout(doc, measure) {
   const dims = pageDims(doc.page);
   const { margins } = doc.page;
   const width = dims.w - margins.left - margins.right;
   const frame = { left: margins.left, top: margins.top, height: dims.h - margins.top - margins.bottom };
   const numbers = computeNumbers(doc.blocks);
-  const ctx = { width, measure, numbers, doc, attached: attachments(doc.blocks) };
+  const ctx = { width, measure, numbers, doc, attached: attachments(doc.blocks), contentH: frame.height };
   const front = doc.front || {};
 
   // ---- body
@@ -272,10 +328,17 @@ export function layout(doc, measure) {
     if (pg.kind !== 'cover') pg.boxes.push(...headerFooterBoxes(doc, dims, i + 1, total, measure));
   });
 
+  let usesFallback = false;
+  for (const pg of pages) {
+    if (!pg.boxes.some((b) => b.t === 'text' && needsFallback(b.text))) continue;
+    usesFallback = true;
+    pg.boxes = pg.boxes.flatMap((b) => (b.t === 'text' && needsFallback(b.text) ? splitFallback(b, measure) : [b]));
+  }
+
   const blocks = {};
   for (const [id, m] of Object.entries(body.blocks)) {
     blocks[id] = { startPage: m.startPage + offset, endPage: m.endPage + offset };
   }
 
-  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total, bodyStartPage: offset + 1 };
+  return { w: dims.w, h: dims.h, pages, blocks, numbers, pageCount: total, bodyStartPage: offset + 1, usesFallback };
 }

@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from './dndModifiers';
-import { Plus, Heading, ListOrdered, AlignLeft, Scissors, Check, Minus, Palette, Table2, TriangleAlert } from 'lucide-react';
+import { Plus, Heading, ListOrdered, AlignLeft, Scissors, Check, Minus, Palette, Table2, TriangleAlert, Camera } from 'lucide-react';
 import { BlockCard } from './BlockCard';
 import { fmtDate } from '../layout/engine';
 import { attachments } from '../model/numbering';
@@ -11,6 +11,7 @@ const KINDS = [
   { kind: 'step', label: 'Step', icon: ListOrdered },
   { kind: 'section', label: 'Section', icon: Heading },
   { kind: 'text', label: 'Text', icon: AlignLeft },
+  { kind: 'image', label: 'Photo', icon: Camera },
   { kind: 'table', label: 'Table', icon: Table2 },
   { kind: 'callout', label: 'Callout', icon: TriangleAlert },
   { kind: 'pageBreak', label: 'Page break', icon: Scissors },

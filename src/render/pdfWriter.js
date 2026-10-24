@@ -14,8 +14,12 @@ const aliasOf = (src) => {
   return `img${src.length}_${h >>> 0}`;
 };
 
-/** Draws the engine's page boxes into a jsPDF document. No layout decisions happen here. */
-export function writePdf(result, doc) {
+/**
+ * Draws the engine's page boxes into a jsPDF document. No layout decisions
+ * happen here. `assets` carries what the boxes reference but the engine
+ * doesn't hold: { fonts: { normal, bold } (base64 TTF), images: { id: dataUrl } }.
+ */
+export function writePdf(result, doc, assets = {}) {
   const pdf = new jsPDF({
     unit: 'mm',
     format: [result.w, result.h].sort((a, b) => a - b),
@@ -23,12 +27,20 @@ export function writePdf(result, doc) {
     compress: true,
   });
   pdf.setProperties({ title: doc.title || 'SOP', subject: doc.docNo || '', creator: 'SOP Builder' });
+  const fallback = !!(result.usesFallback && assets.fonts);
+  if (fallback) {
+    for (const style of ['normal', 'bold']) {
+      pdf.addFileToVFS(`DejaVu-${style}.ttf`, assets.fonts[style]);
+      pdf.addFont(`DejaVu-${style}.ttf`, 'DejaVu', style);
+    }
+  }
 
   result.pages.forEach((page, i) => {
     if (i > 0) pdf.addPage();
     for (const b of page.boxes) {
       if (b.t === 'text') {
-        pdf.setFont('helvetica', styleName(b.bold, b.italic));
+        if (b.font === 'fallback' && fallback) pdf.setFont('DejaVu', b.bold ? 'bold' : 'normal');
+        else pdf.setFont('helvetica', styleName(b.bold, b.italic));
         pdf.setFontSize(b.size);
         pdf.setTextColor(...rgb(b.color));
         pdf.text(b.text, b.x, b.y, { baseline: 'alphabetic' });
@@ -51,8 +63,10 @@ export function writePdf(result, doc) {
         pdf.setFillColor(...rgb(b.fill));
         pdf.triangle(x1, y1, x2, y2, x3, y3, 'F');
       } else if (b.t === 'image') {
-        const fmt = /^data:image\/jpe?g/i.test(b.src) ? 'JPEG' : 'PNG';
-        pdf.addImage(b.src, fmt, b.x, b.y, b.w, b.h, aliasOf(b.src), 'FAST');
+        const src = b.src || assets.images?.[b.imageId];
+        if (!src) continue;
+        const fmt = /^data:image\/jpe?g/i.test(src) ? 'JPEG' : 'PNG';
+        pdf.addImage(src, fmt, b.x, b.y, b.w, b.h, b.imageId || aliasOf(src), 'FAST');
       } else if (b.t === 'link' && b.page) {
         pdf.link(b.x, b.y, b.w, b.h, { pageNumber: b.page });
       }

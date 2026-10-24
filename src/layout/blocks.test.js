@@ -141,3 +141,64 @@ describe('callouts', () => {
     expect(pdf.internal.getNumberOfPages()).toBe(1);
   });
 });
+
+describe('photos', () => {
+  const photo = (w, h, patch = {}) => ({ ...newBlock('image'), imageId: 'img1', w, h, ...patch });
+
+  it('sizes a photo as a share of the column, centred, keeping its aspect ratio', () => {
+    const p = photo(1600, 1200, { size: 'medium' });
+    const r = layout(sop([p]), measure);
+    const img = r.pages[0].boxes.find((b) => b.t === 'image');
+    expect(img.w).toBeCloseTo(170 * 0.5);
+    expect(img.h).toBeCloseTo(img.w * 0.75);
+    expect(img.x + img.w / 2).toBeCloseTo(105);
+  });
+
+  it('caps a tall portrait photo so it never fills the page', () => {
+    const p = photo(900, 1600, { size: 'full' });
+    const r = layout(sop([p]), measure);
+    const img = r.pages[0].boxes.find((b) => b.t === 'image');
+    expect(img.h).toBeLessThanOrEqual((297 - 25 - 22) * 0.6 + 0.01);
+    expect(img.w / img.h).toBeCloseTo(900 / 1600);
+  });
+
+  it('numbers captioned photos as figures and keeps the caption with the photo', () => {
+    const a = photo(1600, 1200, { caption: 'Panel front' });
+    const b = photo(1600, 1200);
+    const c = photo(1600, 1200, { caption: 'Isolator' });
+    const n = computeNumbers([a, b, c]);
+    expect([n[a.id], n[b.id], n[c.id]]).toEqual(['Figure 1', undefined, 'Figure 2']);
+    for (let fill = 20; fill < 70; fill += 3) {
+      const r = layout(sop([{ ...newBlock('text'), body: lorem(fill * 12) }, a]), measure);
+      const imgPage = r.pages.findIndex((p) => p.boxes.some((x) => x.t === 'image'));
+      expect(texts(r.pages[imgPage], a.id)).toContain('Panel front');
+    }
+  });
+
+  it('moves a photo that does not fit to the next page whole', () => {
+    const p = photo(1600, 1200, { size: 'full' });
+    const r = layout(sop([{ ...newBlock('text'), body: lorem(500) }, p]), measure);
+    const pages = r.pages.filter((pg) => pg.boxes.some((x) => x.bid === p.id));
+    expect(pages.length).toBe(1);
+    const img = pages[0].boxes.find((x) => x.t === 'image');
+    expect(img.y + img.h).toBeLessThanOrEqual(297 - 22 + 0.01);
+  });
+
+  it('indents a photo under the step it follows, and holds space before a photo is added', () => {
+    const s = step('Open the panel');
+    const p = photo(1600, 1200, { size: 'full' });
+    const empty = { ...newBlock('image') };
+    const r = layout(sop([s, p, empty]), measure);
+    const img = r.pages[0].boxes.find((b) => b.t === 'image');
+    expect(img.x).toBeCloseTo(20 + 12);
+    expect(r.pages[0].boxes.some((b) => b.bid === empty.id && b.t === 'rect')).toBe(true);
+  });
+
+  it('embeds stored photos from export assets', () => {
+    const JPEG = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==';
+    const doc = sop([photo(1, 1), photo(1, 1)]);
+    const r = layout(doc, measure);
+    const raw = writePdf(r, doc, { images: { img1: JPEG } }).output();
+    expect((raw.match(/\/Subtype \/Image/g) || []).length).toBe(1);
+  });
+});

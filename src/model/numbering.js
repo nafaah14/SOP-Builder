@@ -17,19 +17,21 @@ export function computeNumbers(blocks) {
       out[b.id] = section ? `${section}.${step}` : String(step);
     }
   }
-  // captioned tables are numbered through the whole document: "Table 1", "Table 2"
+  // captioned tables and photos are numbered through the whole document: "Table 1", "Figure 1"
   let table = 0;
+  let figure = 0;
   for (const b of blocks) {
     if (b.kind === 'table' && b.caption?.trim()) out[b.id] = `Table ${++table}`;
+    if (b.kind === 'image' && b.caption?.trim()) out[b.id] = `Figure ${++figure}`;
   }
   return out;
 }
 
 /** Kinds that sit inside the step above them, indented to its text. */
-export const ATTACHABLE = new Set(['table', 'callout', 'pageBreak']);
+export const ATTACHABLE = new Set(['table', 'callout', 'image', 'pageBreak']);
 
 /**
- * blockId -> stepId for tables and callouts that follow a step with nothing
+ * blockId -> stepId for tables, callouts and photos that follow a step with nothing
  * but other tables, callouts or page breaks in between. They're laid out at
  * the step's indent, so a warning placed after step 2.3 visibly belongs to it.
  */

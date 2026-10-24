@@ -11,6 +11,9 @@ import { Toast } from './Toast';
 import { layout } from '../layout/engine';
 import { sharedMeasurer } from '../layout/measure';
 import { writePdf, pdfFileName } from '../render/pdfWriter';
+import { exportAssets } from '../render/exportAssets';
+import { putImage, imageDataUrl } from '../storage/images';
+import { fileToPhoto, imageFiles } from './imageUpload';
 import * as ops from '../model/ops';
 import { BLOCK_KINDS, newBlock } from '../model/defaults';
 
@@ -105,6 +108,19 @@ function EditorInner({ initial }) {
         action: () => set((d) => ops.restoreBlock(d, removed, index)),
       });
     },
+    addPhotos: async (files, where = {}) => {
+      const photos = [];
+      for (const f of files) {
+        try {
+          const p = await fileToPhoto(f);
+          photos.push({ imageId: await putImage(p), w: p.w, h: p.h });
+        } catch (err) {
+          console.error(err);
+          setToast({ text: `Couldn't read ${f.name || 'that image'}` });
+        }
+      }
+      if (photos.length) set((d) => ops.placePhotos(d, photos, where));
+    },
     moveSectionBy: (sid, delta) => set((d) => {
       const secs = d.blocks.filter((b) => b.kind === 'section');
       const i = secs.findIndex((s) => s.id === sid);
@@ -114,9 +130,57 @@ function EditorInner({ initial }) {
     }),
   }), [set]);
 
-  const exportPdf = useCallback(() => {
-    writePdf(layout(doc, measure), doc).save(pdfFileName(doc));
+  const [exporting, setExporting] = useState(false);
+  const exportPdf = useCallback(async () => {
+    setExporting(true);
+    try {
+      const r = layout(doc, measure);
+      const assets = await exportAssets(r, { loadImage: imageDataUrl });
+      writePdf(r, doc, assets).save(pdfFileName(doc));
+    } catch (err) {
+      console.error(err);
+      setToast({ text: `Export failed: ${err.message}` });
+    } finally {
+      setExporting(false);
+    }
   }, [doc]);
+
+  // Paste a screenshot anywhere, or drop photos on the canvas: they land after
+  // the block you're in (or fill it, if it's an empty photo block).
+  const blockAt = (el) => {
+    const id = el?.closest?.('.block')?.id?.replace('block-', '');
+    return docRef.current.blocks.find((b) => b.id === id) || null;
+  };
+  const placeFiles = useCallback((files, target) => {
+    const b = blockAt(target);
+    act.addPhotos(files, b?.kind === 'image' && !b.imageId ? { into: b.id } : { after: b?.id ?? null });
+  }, [act]);
+  useEffect(() => {
+    const onPaste = (e) => {
+      const files = imageFiles(e.clipboardData?.files);
+      if (!files.length) return;
+      e.preventDefault();
+      placeFiles(files, document.activeElement);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [placeFiles]);
+  const [dragging, setDragging] = useState(false);
+  const dropProps = {
+    onDragOver: (e) => {
+      if (![...e.dataTransfer.types].includes('Files')) return;
+      e.preventDefault();
+      setDragging(true);
+    },
+    onDragLeave: (e) => { if (e.currentTarget === e.target) setDragging(false); },
+    onDrop: (e) => {
+      const files = imageFiles(e.dataTransfer.files);
+      setDragging(false);
+      if (!files.length) return;
+      e.preventDefault();
+      placeFiles(files, e.target);
+    },
+  };
 
   useEffect(() => {
     const onKey = (e) => {
@@ -149,12 +213,12 @@ function EditorInner({ initial }) {
         <button className={`btn sm${showPreview ? ' on' : ''}`} title="Preview (Ctrl+P)" onClick={() => setShowPreview((v) => !v)}>
           <Eye size={15} /> <span className="hide-sm">Preview</span>
         </button>
-        <button className="btn sm primary" onClick={exportPdf}><Download size={15} /> <span className="hide-sm">PDF</span></button>
+        <button className="btn sm primary" onClick={exportPdf} disabled={exporting}><Download size={15} /> <span className="hide-sm">{exporting ? 'Preparing…' : 'PDF'}</span></button>
       </header>
 
       <div className="workspace">
         {wide && <Outline doc={doc} result={result} act={act} onJump={jump} />}
-        <main className="canvas-scroll">
+        <main className={`canvas-scroll${dragging ? ' drop-target' : ''}`} {...dropProps}>
           <Canvas doc={doc} result={result} act={act} onOpenSettings={(tab) => setShowSettings(tab || 'details')} />
         </main>
         {showPreview && (

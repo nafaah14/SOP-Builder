@@ -85,3 +85,27 @@ export function nextRev(rev) {
   if (/^[A-Y]$/i.test(s)) return String.fromCharCode(s.charCodeAt(0) + 1);
   return '';
 }
+
+/**
+ * Put photos into the document: the first fills `into` (an existing photo
+ * block) if given, the rest become new photo blocks after it — or after
+ * `after`, or at the end.
+ */
+export function placePhotos(doc, photos, { into = null, after = null } = {}) {
+  let d = doc;
+  let queue = photos;
+  let anchor = after;
+  if (into && queue.length) {
+    const [first, ...rest] = queue;
+    d = updateBlock(d, into, first);
+    queue = rest;
+    anchor = into;
+  }
+  let at = anchor ? d.blocks.findIndex((b) => b.id === anchor) + 1 : d.blocks.length;
+  if (at <= 0) at = d.blocks.length;
+  for (const p of queue) {
+    [d] = insertBlock(d, at, { ...newBlock('image'), ...p });
+    at += 1;
+  }
+  return d;
+}

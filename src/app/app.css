@@ -400,3 +400,21 @@ button, input, textarea, select { font: inherit; color: inherit; }
 @media (prefers-color-scheme: dark) { .callout-label, .callout-chip:not(.on) { filter: brightness(1.5); } }
 .callout-title { flex: 1; min-width: 0; border: 0; background: transparent; font-weight: 600; font-size: 14px; color: var(--ink); outline: none; letter-spacing: 0; }
 .callout-title::placeholder { color: var(--muted); font-weight: 400; }
+
+/* symbols Helvetica lacks are drawn in DejaVu, fetched only when a page uses one */
+@font-face { font-family: 'DejaVu Sans'; src: url('/fonts/DejaVuSans.ttf') format('truetype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'DejaVu Sans'; src: url('/fonts/DejaVuSans-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+
+/* ---------- photos ---------- */
+.img-empty { display: grid; justify-items: center; gap: 8px; padding: 18px 8px; border: 2px dashed var(--rule-strong); border-radius: 10px; margin: 0 4px; }
+.img-empty-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.img-ed { padding: 0 4px; }
+.img-frame-wrap { display: flex; justify-content: center; background: color-mix(in srgb, var(--ink) 4%, transparent); border-radius: 8px; padding: 10px; }
+.img-frame img { display: block; width: 100%; height: auto; border-radius: 2px; }
+.img-frame img.framed { outline: 1px solid #B8BEC7; }
+.img-loading { width: 100%; background: var(--hover); }
+.img-caption-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.img-opts { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.img-opts .seg-btn { padding: 5px 10px; font-size: 12.5px; }
+.canvas-scroll.drop-target { outline: 3px dashed color-mix(in srgb, var(--ink) 35%, transparent); outline-offset: -8px; }
+.btn:disabled { opacity: .6; cursor: default; }

@@ -4,6 +4,7 @@ import { GripVertical, ArrowUp, ArrowDown, Copy, Trash2, Scissors } from 'lucide
 import { AutoTextarea } from './AutoTextarea';
 import { TableEditor } from './TableEditor';
 import { CalloutEditor } from './CalloutEditor';
+import { ImageEditor } from './ImageEditor';
 import { BLOCK_KINDS } from '../model/defaults';
 
 const BODY_HINT = 'One line per paragraph. "- " for bullets, "1. " for numbered, **bold**, *italic*.';
@@ -86,6 +87,15 @@ export function BlockCard({ block, number, meta, isFirst, isLast, act, accent, a
 
         {block.kind === 'callout' && (
           <CalloutEditor block={block} onChange={(p, key) => act.update(block.id, p, key)} />
+        )}
+
+        {block.kind === 'image' && (
+          <ImageEditor
+            block={block}
+            number={number}
+            onChange={(p, key) => act.update(block.id, p, key)}
+            onFiles={(files) => act.addPhotos(files, { into: block.id })}
+          />
         )}
 
         {block.kind === 'pageBreak' && (

@@ -13,7 +13,16 @@ export const BLOCK_KINDS = {
   text: 'Text',
   table: 'Table',
   callout: 'Callout',
+  image: 'Photo',
   pageBreak: 'Page break',
+};
+
+/** Photo widths as a share of the text column. */
+export const IMAGE_SIZES = {
+  small: { label: 'Small', frac: 0.35 },
+  medium: { label: 'Medium', frac: 0.5 },
+  large: { label: 'Large', frac: 0.75 },
+  full: { label: 'Full width', frac: 1 },
 };
 
 /** Hazard levels follow the usual signal-word order, most severe first. */
@@ -47,6 +56,7 @@ export function newBlock(kind) {
     case 'text': return { ...base, body: '' };
     case 'table': return { ...base, ...newTable() };
     case 'callout': return { ...base, variant: 'warning', title: '', body: '' };
+    case 'image': return { ...base, imageId: null, w: 0, h: 0, caption: '', size: 'large', frame: true };
     case 'pageBreak': return base;
     default: throw new Error(`Unknown block kind: ${kind}`);
   }

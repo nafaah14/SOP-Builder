@@ -26,6 +26,13 @@ Run `npm test` and `npm run build` before committing anything non-trivial.
 - Text is measured with jsPDF's Helvetica metrics (`layout/measure.js`) on
   both sides. If fonts change, change them in the measurer and the writer
   together.
+- Text outside WinAnsi is split into runs drawn in DejaVu Sans
+  (`layout/winansi.js`). Widths come from `layout/fallbackWidths.json`;
+  regenerate it with `node scripts/gen-fallback-widths.mjs` if the fonts in
+  `public/fonts/` change. Fonts are fetched only at export when used.
+- Photos are stored in the IndexedDB `images` store and referenced by
+  `imageId`; layout boxes carry the id and `render/exportAssets.js` loads
+  the data for the PDF.
 - Pagination is rows + glue. Keep-with-next, widow/orphan control and
   "don't split" are expressed as `glue` on rows, not as special cases in the
   paginator.

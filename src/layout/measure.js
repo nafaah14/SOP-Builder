@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import { needsFallback, segments, fallbackEm } from './winansi';
 
 export const PT = 0.352778; // 1pt in mm
 
@@ -22,7 +23,9 @@ export function createMeasurer() {
       if (w === undefined) {
         doc.setFont('helvetica', styleName(bold, italic));
         doc.setFontSize(size);
-        w = doc.getTextWidth(text);
+        w = needsFallback(text)
+          ? segments(text).reduce((s, seg) => s + (seg.fallback ? fallbackEm(seg.text, bold) * size * PT : doc.getTextWidth(seg.text)), 0)
+          : doc.getTextWidth(text);
         if (cache.size > 20000) cache.clear();
         cache.set(key, w);
       }

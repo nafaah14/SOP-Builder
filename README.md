@@ -54,7 +54,12 @@ the next page when they don't fit.
    numbered "Table N", header row repeated across pages) and callouts
    (Danger, Warning, Caution, Note, Tip). Tables and callouts placed after a
    step are indented under it.
-4. Images — camera, upload, paste; placement rules.
+   3.1 ✅ Symbols Helvetica can't print (Ω ≤ ≥ √ Δ → ✓ ✗ …) are drawn in an
+   embedded DejaVu Sans, subset, and only when a document uses them.
+4. ✅ Photos — take with the camera, upload several at once, paste a
+   screenshot, or drop files on the canvas. Sized Small/Medium/Large/Full,
+   centred, height-capped, never split; captions numbered "Figure N".
+   Stored once per device in IndexedDB, outside the document.
 5. Annotation editor — arrows, boxes, circles, highlighter, numbered markers,
    text labels, blur, crop/rotate; non-destructive.
 6. Google Drive sync, `.sop` backup files, PWA install, Cloudflare Pages.
