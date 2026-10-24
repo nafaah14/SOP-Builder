@@ -64,3 +64,9 @@ Build command `npm run build`, deploy command `npx wrangler deploy`.
 `wrangler.jsonc` serves `dist/` as static assets with single-page-app
 fallback, so `/doc/<id>` survives a reload. Without that file wrangler tries
 to auto-detect the project from `vite.config.js` and fails.
+
+Pushes only build if the Cloudflare GitHub app can see this repository. If
+Settings → Build says "disconnected from your Git account", grant the app
+access (GitHub → Settings → Applications → Cloudflare Workers and Pages →
+Repository access) — otherwise `main` moves on and the site silently stays
+on the last version built. Check what's live at `/version.json`.
